@@ -4,11 +4,11 @@
 
 // TODO:
 // Audio file and macro definitions
-// Confirm if byte data type should be unsigned or not (for negative offset operations)
+// Confirm if byte data type should be unsigned or not (for negative offset operations) - DONE
 
 // Datatype Definitions
-typedef unsigned char byte;
-typedef unsigned short word;
+typedef signed char byte;
+typedef signed short word;
 
 /*
 	CPU Definitions
@@ -26,6 +26,8 @@ typedef unsigned short word;
 #define CASTWD(x, y) ((((word)x) << 8) | ((word)y))
 #define PUSH(x, y)   MEM[SP] = y; --SP; MEM[SP] = x; --SP;         // PUSH stores LSB first, then MSB
 #define POP(x, y)    x = MEM[SP]; ++SP; y = MEM[SP]; ++SP;         // POP loads MSB first, then LSB
+#define SETBIT(val, bit) val |= (0x01 << bit)
+#define CLRBIT(val, bit) val &= ~(0x01 << bit)
 
 /*
 	Picture Processing Unit Definitions
@@ -41,10 +43,14 @@ typedef unsigned short word;
 /*
 	Status Register Definitions
 */
-#define CARRY_FLAG			 0x08
-#define HALF_CARRY_FLAG		 0x10
-#define SUBTRACT_FLAG		 0x20
-#define ZERO_FLAG			 0x40
+#define CARRY_FLAG			 0x10
+#define CARRY_FLAG_BIT       4
+#define HALF_CARRY_FLAG		 0x20
+#define HALF_CARRY_FLAG_BIT  5
+#define SUBTRACT_FLAG		 0x40
+#define SUBTRACT_FLAG_BIT    6
+#define ZERO_FLAG			 0x80
+#define ZERO_FLAG_BIT        7    
 
 /*
 	Interrupt Flag Definitions - Highest Priority = Lowest Bit (0)

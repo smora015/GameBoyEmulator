@@ -15,7 +15,10 @@ int main(int argc, char **argv)
 	// Instantiate classes
 	GBCartridge ROM = GBCartridge("");
 	GBCPU CPU = GBCPU();
-	
+    CPU.execute();
+
+    //cout << "Finished executing instructions..." << endl;
+
 	//while (1);
 	/* Implementation priorities (1 == do first, 2+ == do after, from top-bottom order)
 		1- Cartridge (all)
@@ -33,13 +36,13 @@ int main(int argc, char **argv)
 	*/
 
 
-	/*
+	//
 	// Initialize/configure OpenGL Rendering function, then run main rendering loop.
-	GLInit(&argc, argv);
-	glColor3f(GLfloat(0.5), GLfloat(0.7), GLfloat(0.2) );
-	glutMainLoop();
+	//GLInit(&argc, argv);
+	//glColor3f(GLfloat(0.5), GLfloat(0.7), GLfloat(0.2) );
+	//glutMainLoop();
 
-	*/
+	//
   return 0;
 
 }
