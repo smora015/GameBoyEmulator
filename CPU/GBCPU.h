@@ -40,9 +40,7 @@ public:
 	byte A;						// Accumulator Register
 
     bool DI_Executed;           // Flag that tells CPU to disable interrupt on this instruction. TODO: Have CPU check this before executing instruction
-	/*	Status Register Bit Flags
-		b8|0	0	0	0	0	0	0	0|b0
-		   Z	S	H	C	-	-	-   -         	*/
+
 	byte F;						// Status Register
 	byte B, C, 					// General Purpose Registers
 		 D, E,					// These may be paired to form 16-bit registers
@@ -499,6 +497,91 @@ public:
         ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
     }
 
+    // SLA n
+    inline void SLA(byte & reg)
+    {
+        // reset N and H
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // Set Carry flag if the msb is high
+        if ((reg & 0x80) >> 7)
+        {
+            SETBIT(F, CARRY_FLAG_BIT);
+            reg = (reg << 1) & 0xFE;
+        }
+        else
+        {
+            CLRBIT(F, CARRY_FLAG_BIT);
+            reg = (reg << 1) & 0xFE;
+        }
+
+        // Detect zero
+        ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // SRA n
+    inline void SRA(byte & reg)
+    {
+        // reset N and H
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // Set Carry flag if the lsb is high
+        if ((reg & 0x01) )
+        {
+            SETBIT(F, CARRY_FLAG_BIT);
+            reg = (reg & 0xFF) >> 1;
+        }
+        else
+        {
+            CLRBIT(F, CARRY_FLAG_BIT);
+            reg = (reg & 0xFF) >> 1;
+        }
+
+        // Detect zero
+        ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // SRA n
+    inline void SRL(byte & reg)
+    {
+        // reset N and H
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // Set Carry flag if the lsb is high
+        if ((reg & 0x01))
+        {
+            SETBIT(F, CARRY_FLAG_BIT);
+            reg = (reg >> 1) & 0x7F;
+        }
+        else
+        {
+            CLRBIT(F, CARRY_FLAG_BIT);
+            reg = (reg >> 1) & 0x7F;
+        }
+
+        // Detect zero
+        ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // BIT b,r
+    inline void BIT(byte bit, byte & reg)
+    {
+        // Reset N flag
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+
+        // Set H flag
+        SETBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // Set Z flag if bit of reg is 0
+        if ((reg & (1 << bit)))
+            SETBIT(F, ZERO_FLAG_BIT);
+        else
+            CLRBIT(F, ZERO_FLAG_BIT);
+    }
+
     // JP cc
     inline void JP()
     {
@@ -868,6 +951,23 @@ public:
     void CBOP1E(){ RR(MEM[CASTWD(H, L)]); cycles += 16; }
     void CBOP1F(){ RR(A); cycles += 8; }
 
+    void CBOP20(){ SLA(B); cycles += 8; }
+    void CBOP21(){ SLA(C); cycles += 8; }
+    void CBOP22(){ SLA(D); cycles += 8; }
+    void CBOP23(){ SLA(E); cycles += 8; }
+    void CBOP24(){ SLA(H); cycles += 8; }
+    void CBOP25(){ SLA(L); cycles += 8; }
+    void CBOP26(){ SLA(MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP27(){ SLA(A); cycles += 8; }
+    void CBOP28(){ SRA(B); cycles += 8; }
+    void CBOP29(){ SRA(C); cycles += 8; }
+    void CBOP2A(){ SRA(D); cycles += 8; }
+    void CBOP2B(){ SRA(E); cycles += 8; }
+    void CBOP2C(){ SRA(H); cycles += 8; }
+    void CBOP2D(){ SRA(L); cycles += 8; }
+    void CBOP2E(){ SRA(MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP2F(){ SRA(A); cycles += 8; }
+
     void CBOP30(){ SWAP(B); cycles += 8; }
     void CBOP31(){ SWAP(C); cycles += 8; }
     void CBOP32(){ SWAP(D); cycles += 8; }
@@ -876,9 +976,220 @@ public:
     void CBOP35(){ SWAP(L); cycles += 8; }
     void CBOP36(){ SWAP(MEM[CASTWD(H, L)]); cycles += 16; }
     void CBOP37(){ SWAP(A); cycles += 8; }
+    void CBOP38(){ SRL(B); cycles += 8; }
+    void CBOP39(){ SRL(C); cycles += 8; }
+    void CBOP3A(){ SRL(D); cycles += 8; }
+    void CBOP3B(){ SRL(E); cycles += 8; }
+    void CBOP3C(){ SRL(H); cycles += 8; }
+    void CBOP3D(){ SRL(L); cycles += 8; }
+    void CBOP3E(){ SRL(MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP3F(){ SRL(A); cycles += 8; }
 
+    void CBOP40(){ BIT(0, B); cycles += 8; }
+    void CBOP41(){ BIT(0, C); cycles += 8; }
+    void CBOP42(){ BIT(0, D); cycles += 8; }
+    void CBOP43(){ BIT(0, E); cycles += 8; }
+    void CBOP44(){ BIT(0, H); cycles += 8; }
+    void CBOP45(){ BIT(0, L); cycles += 8; }
+    void CBOP46(){ BIT(0, MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP47(){ BIT(0, A); cycles += 8; }
+    void CBOP48(){ BIT(1, B); cycles += 8; }
+    void CBOP49(){ BIT(1, C); cycles += 8; }
+    void CBOP4A(){ BIT(1, D); cycles += 8; }
+    void CBOP4B(){ BIT(1, E); cycles += 8; }
+    void CBOP4C(){ BIT(1, H); cycles += 8; }
+    void CBOP4D(){ BIT(1, L); cycles += 8; }
+    void CBOP4E(){ BIT(1, MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP4F(){ BIT(1, A); cycles += 8; }
 
-    // left off on pg 105 - 110 for remaining shit CB opcodes
+    void CBOP50(){ BIT(2, B); cycles += 8; }
+    void CBOP51(){ BIT(2, C); cycles += 8; }
+    void CBOP52(){ BIT(2, D); cycles += 8; }
+    void CBOP53(){ BIT(2, E); cycles += 8; }
+    void CBOP54(){ BIT(2, H); cycles += 8; }
+    void CBOP55(){ BIT(2, L); cycles += 8; }
+    void CBOP56(){ BIT(2, MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP57(){ BIT(2, A); cycles += 8; }
+    void CBOP58(){ BIT(3, B); cycles += 8; }
+    void CBOP59(){ BIT(3, C); cycles += 8; }
+    void CBOP5A(){ BIT(3, D); cycles += 8; }
+    void CBOP5B(){ BIT(3, E); cycles += 8; }
+    void CBOP5C(){ BIT(3, H); cycles += 8; }
+    void CBOP5D(){ BIT(3, L); cycles += 8; }
+    void CBOP5E(){ BIT(3, MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP5F(){ BIT(3, A); cycles += 8; }
+
+    void CBOP60(){ BIT(4, B); cycles += 8; }
+    void CBOP61(){ BIT(4, C); cycles += 8; }
+    void CBOP62(){ BIT(4, D); cycles += 8; }
+    void CBOP63(){ BIT(4, E); cycles += 8; }
+    void CBOP64(){ BIT(4, H); cycles += 8; }
+    void CBOP65(){ BIT(4, L); cycles += 8; }
+    void CBOP66(){ BIT(4, MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP67(){ BIT(4, A); cycles += 8; }
+    void CBOP68(){ BIT(5, B); cycles += 8; }
+    void CBOP69(){ BIT(5, C); cycles += 8; }
+    void CBOP6A(){ BIT(5, D); cycles += 8; }
+    void CBOP6B(){ BIT(5, E); cycles += 8; }
+    void CBOP6C(){ BIT(5, H); cycles += 8; }
+    void CBOP6D(){ BIT(5, L); cycles += 8; }
+    void CBOP6E(){ BIT(5, MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP6F(){ BIT(5, A); cycles += 8; }
+
+    void CBOP70(){ BIT(6, B); cycles += 8; }
+    void CBOP71(){ BIT(6, C); cycles += 8; }
+    void CBOP72(){ BIT(6, D); cycles += 8; }
+    void CBOP73(){ BIT(6, E); cycles += 8; }
+    void CBOP74(){ BIT(6, H); cycles += 8; }
+    void CBOP75(){ BIT(6, L); cycles += 8; }
+    void CBOP76(){ BIT(6, MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP77(){ BIT(6, A); cycles += 8; }
+    void CBOP78(){ BIT(7, B); cycles += 8; }
+    void CBOP79(){ BIT(7, C); cycles += 8; }
+    void CBOP7A(){ BIT(7, D); cycles += 8; }
+    void CBOP7B(){ BIT(7, E); cycles += 8; }
+    void CBOP7C(){ BIT(7, H); cycles += 8; }
+    void CBOP7D(){ BIT(7, L); cycles += 8; }
+    void CBOP7E(){ BIT(7, MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP7F(){ BIT(7, A); cycles += 8; }
+
+    // RES
+    void CBOP80(){ CLRBIT(B, 0); cycles += 8; }
+    void CBOP81(){ CLRBIT(C, 0); cycles += 8; }
+    void CBOP82(){ CLRBIT(D, 0); cycles += 8; }
+    void CBOP83(){ CLRBIT(E, 0); cycles += 8; }
+    void CBOP84(){ CLRBIT(H, 0); cycles += 8; }
+    void CBOP85(){ CLRBIT(L, 0); cycles += 8; }
+    void CBOP86(){ CLRBIT(MEM[CASTWD(H,L)], 0); cycles += 8; }
+    void CBOP87(){ CLRBIT(A, 1); cycles += 8; }
+    void CBOP88(){ CLRBIT(B, 1); cycles += 8; }
+    void CBOP89(){ CLRBIT(C, 1); cycles += 8; }
+    void CBOP8A(){ CLRBIT(D, 1); cycles += 8; }
+    void CBOP8B(){ CLRBIT(E, 1); cycles += 8; }
+    void CBOP8C(){ CLRBIT(H, 1); cycles += 8; }
+    void CBOP8D(){ CLRBIT(L, 1); cycles += 8; }
+    void CBOP8E(){ CLRBIT(MEM[CASTWD(H,L)], 1); cycles += 8; }
+    void CBOP8F(){ CLRBIT(A, 1); cycles += 8; }
+
+    void CBOP90(){ CLRBIT(B, 2); cycles += 8; }
+    void CBOP91(){ CLRBIT(C, 2); cycles += 8; }
+    void CBOP92(){ CLRBIT(D, 2); cycles += 8; }
+    void CBOP93(){ CLRBIT(E, 2); cycles += 8; }
+    void CBOP94(){ CLRBIT(H, 2); cycles += 8; }
+    void CBOP95(){ CLRBIT(L, 2); cycles += 8; }
+    void CBOP96(){ CLRBIT(MEM[CASTWD(H, L)], 2); cycles += 8; }
+    void CBOP97(){ CLRBIT(A, 2); cycles += 8; }
+    void CBOP98(){ CLRBIT(B, 3); cycles += 8; }
+    void CBOP99(){ CLRBIT(C, 3); cycles += 8; }
+    void CBOP9A(){ CLRBIT(D, 3); cycles += 8; }
+    void CBOP9B(){ CLRBIT(E, 3); cycles += 8; }
+    void CBOP9C(){ CLRBIT(H, 3); cycles += 8; }
+    void CBOP9D(){ CLRBIT(L, 3); cycles += 8; }
+    void CBOP9E(){ CLRBIT(MEM[CASTWD(H, L)], 3); cycles += 8; }
+    void CBOP9F(){ CLRBIT(A, 3); cycles += 8; }
+
+    void CBOPA0(){ CLRBIT(B, 4); cycles += 8; }
+    void CBOPA1(){ CLRBIT(C, 4); cycles += 8; }
+    void CBOPA2(){ CLRBIT(D, 4); cycles += 8; }
+    void CBOPA3(){ CLRBIT(E, 4); cycles += 8; }
+    void CBOPA4(){ CLRBIT(H, 4); cycles += 8; }
+    void CBOPA5(){ CLRBIT(L, 4); cycles += 8; }
+    void CBOPA6(){ CLRBIT(MEM[CASTWD(H, L)], 4); cycles += 8; }
+    void CBOPA7(){ CLRBIT(A, 4); cycles += 8; }
+    void CBOPA8(){ CLRBIT(B, 5); cycles += 8; }
+    void CBOPA9(){ CLRBIT(C, 5); cycles += 8; }
+    void CBOPAA(){ CLRBIT(D, 5); cycles += 8; }
+    void CBOPAB(){ CLRBIT(E, 5); cycles += 8; }
+    void CBOPAC(){ CLRBIT(H, 5); cycles += 8; }
+    void CBOPAD(){ CLRBIT(L, 5); cycles += 8; }
+    void CBOPAE(){ CLRBIT(MEM[CASTWD(H, L)], 5); cycles += 8; }
+    void CBOPAF(){ CLRBIT(A, 5); cycles += 8; }
+
+    void CBOPB0(){ CLRBIT(B, 6); cycles += 8; }
+    void CBOPB1(){ CLRBIT(C, 6); cycles += 8; }
+    void CBOPB2(){ CLRBIT(D, 6); cycles += 8; }
+    void CBOPB3(){ CLRBIT(E, 6); cycles += 8; }
+    void CBOPB4(){ CLRBIT(H, 6); cycles += 8; }
+    void CBOPB5(){ CLRBIT(L, 6); cycles += 8; }
+    void CBOPB6(){ CLRBIT(MEM[CASTWD(H, L)], 6); cycles += 8; }
+    void CBOPB7(){ CLRBIT(A, 6); cycles += 8; }
+    void CBOPB8(){ CLRBIT(B, 7); cycles += 8; }
+    void CBOPB9(){ CLRBIT(C, 7); cycles += 8; }
+    void CBOPBA(){ CLRBIT(D, 7); cycles += 8; }
+    void CBOPBB(){ CLRBIT(E, 7); cycles += 8; }
+    void CBOPBC(){ CLRBIT(H, 7); cycles += 8; }
+    void CBOPBD(){ CLRBIT(L, 7); cycles += 8; }
+    void CBOPBE(){ CLRBIT(MEM[CASTWD(H, L)], 7); cycles += 8; }
+    void CBOPBF(){ CLRBIT(A, 7); cycles += 8; }
+
+    // SET
+    void CBOPC0(){ SETBIT(B, 0); cycles += 8; }
+    void CBOPC1(){ SETBIT(C, 0); cycles += 8; }
+    void CBOPC2(){ SETBIT(D, 0); cycles += 8; }
+    void CBOPC3(){ SETBIT(E, 0); cycles += 8; }
+    void CBOPC4(){ SETBIT(H, 0); cycles += 8; }
+    void CBOPC5(){ SETBIT(L, 0); cycles += 8; }
+    void CBOPC6(){ SETBIT(MEM[CASTWD(H,L)], 0); cycles += 8; }
+    void CBOPC7(){ SETBIT(A, 1); cycles += 8; }
+    void CBOPC8(){ SETBIT(B, 1); cycles += 8; }
+    void CBOPC9(){ SETBIT(C, 1); cycles += 8; }
+    void CBOPCA(){ SETBIT(D, 1); cycles += 8; }
+    void CBOPCB(){ SETBIT(E, 1); cycles += 8; }
+    void CBOPCC(){ SETBIT(H, 1); cycles += 8; }
+    void CBOPCD(){ SETBIT(L, 1); cycles += 8; }
+    void CBOPCE(){ SETBIT(MEM[CASTWD(H,L)], 1); cycles += 8; }
+    void CBOPCF(){ SETBIT(A, 1); cycles += 8; }
+  
+    void CBOPD0(){ SETBIT(B, 2); cycles += 8; }
+    void CBOPD1(){ SETBIT(C, 2); cycles += 8; }
+    void CBOPD2(){ SETBIT(D, 2); cycles += 8; }
+    void CBOPD3(){ SETBIT(E, 2); cycles += 8; }
+    void CBOPD4(){ SETBIT(H, 2); cycles += 8; }
+    void CBOPD5(){ SETBIT(L, 2); cycles += 8; }
+    void CBOPD6(){ SETBIT(MEM[CASTWD(H, L)], 2); cycles += 8; }
+    void CBOPD7(){ SETBIT(A, 2); cycles += 8; }
+    void CBOPD8(){ SETBIT(B, 3); cycles += 8; }
+    void CBOPD9(){ SETBIT(C, 3); cycles += 8; }
+    void CBOPDA(){ SETBIT(D, 3); cycles += 8; }
+    void CBOPDB(){ SETBIT(E, 3); cycles += 8; }
+    void CBOPDC(){ SETBIT(H, 3); cycles += 8; }
+    void CBOPDD(){ SETBIT(L, 3); cycles += 8; }
+    void CBOPDE(){ SETBIT(MEM[CASTWD(H, L)], 3); cycles += 8; }
+    void CBOPDF(){ SETBIT(A, 3); cycles += 8; }
+
+    void CBOPE0(){ SETBIT(B, 4); cycles += 8; }
+    void CBOPE1(){ SETBIT(C, 4); cycles += 8; }
+    void CBOPE2(){ SETBIT(D, 4); cycles += 8; }
+    void CBOPE3(){ SETBIT(E, 4); cycles += 8; }
+    void CBOPE4(){ SETBIT(H, 4); cycles += 8; }
+    void CBOPE5(){ SETBIT(L, 4); cycles += 8; }
+    void CBOPE6(){ SETBIT(MEM[CASTWD(H, L)], 4); cycles += 8; }
+    void CBOPE7(){ SETBIT(A, 4); cycles += 8; }
+    void CBOPE8(){ SETBIT(B, 5); cycles += 8; }
+    void CBOPE9(){ SETBIT(C, 5); cycles += 8; }
+    void CBOPEA(){ SETBIT(D, 5); cycles += 8; }
+    void CBOPEB(){ SETBIT(E, 5); cycles += 8; }
+    void CBOPEC(){ SETBIT(H, 5); cycles += 8; }
+    void CBOPED(){ SETBIT(L, 5); cycles += 8; }
+    void CBOPEE(){ SETBIT(MEM[CASTWD(H, L)], 5); cycles += 8; }
+    void CBOPEF(){ SETBIT(A, 5); cycles += 8; }
+
+    void CBOPF0(){ SETBIT(B, 6); cycles += 8; }
+    void CBOPF1(){ SETBIT(C, 6); cycles += 8; }
+    void CBOPF2(){ SETBIT(D, 6); cycles += 8; }
+    void CBOPF3(){ SETBIT(E, 6); cycles += 8; }
+    void CBOPF4(){ SETBIT(H, 6); cycles += 8; }
+    void CBOPF5(){ SETBIT(L, 6); cycles += 8; }
+    void CBOPF6(){ SETBIT(MEM[CASTWD(H, L)], 6); cycles += 8; }
+    void CBOPF7(){ SETBIT(A, 6); cycles += 8; }
+    void CBOPF8(){ SETBIT(B, 7); cycles += 8; }
+    void CBOPF9(){ SETBIT(C, 7); cycles += 8; }
+    void CBOPFA(){ SETBIT(D, 7); cycles += 8; }
+    void CBOPFB(){ SETBIT(E, 7); cycles += 8; }
+    void CBOPFC(){ SETBIT(H, 7); cycles += 8; }
+    void CBOPFD(){ SETBIT(L, 7); cycles += 8; }
+    void CBOPFE(){ SETBIT(MEM[CASTWD(H, L)], 7); cycles += 8; }
+    void CBOPFF(){ SETBIT(A, 7); cycles += 8; }
 };
 
 
