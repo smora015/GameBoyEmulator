@@ -39,6 +39,7 @@ public:
 	word PC;					// Program Counter
 	byte A;						// Accumulator Register
 
+    bool DI_Executed;           // Flag that tells CPU to disable interrupt on this instruction. TODO: Have CPU check this before executing instruction
 	/*	Status Register Bit Flags
 		b8|0	0	0	0	0	0	0	0|b0
 		   Z	S	H	C	-	-	-   -         	*/
@@ -253,18 +254,318 @@ public:
         ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
     }
 
+    inline void SWAP(byte & reg)
+    {
+        // Clear N, H, C
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+        CLRBIT(F, CARRY_FLAG_BIT);
+
+        reg = (reg << 4) | ((reg >> 4) & 0x0F) & 0xFF;
+
+        // Detect zero
+        ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // Decimal Adjust Register A
+    inline void DAA()
+    {
+        // Reset flag H
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        byte temp = A;
+
+        // Adjust the binary decimal digits if we have a N and C or H flag
+        if ( (F & SUBTRACT_FLAG) >> SUBTRACT_FLAG_BIT ) 
+        {
+            if ((F & HALF_CARRY_FLAG) >> HALF_CARRY_FLAG_BIT )
+                temp = (temp - 6) & 0xFF;
+
+            if ((F & CARRY_FLAG) >> CARRY_FLAG_BIT )
+                temp -= 0x60;
+        }
+        else 
+        {
+            if ((temp & 0xF)>9 || (((F & HALF_CARRY_FLAG) >> HALF_CARRY_FLAG_BIT) == 1) )
+                temp += 6;
+
+            if ((temp & 0xFFF)>0x9F || (((F & CARRY_FLAG) >> CARRY_FLAG_BIT) == 1) ) 
+                temp += 0x60;
+        }
+
+        A = temp;
+
+        if ((temp & 0x100) == 0x100)
+            SETBIT(F, HALF_CARRY_FLAG_BIT);
+        else
+            CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // Detect zero
+        ((A & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+
+    }
+
+    // Rotate A left
+    inline void RLCA()
+    {
+        // Reset N and H flag
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // If MSB is high, set carry flag
+        if ((A & 0x80) >> 7)
+        {
+            SETBIT(F, CARRY_FLAG_BIT);
+            A = ((A << 1) & 0xFE) | 0x01;
+        }
+        else
+        {
+            CLRBIT(F, CARRY_FLAG_BIT);
+            A = ((A << 1) & 0xFE);
+        }
+
+        // Detect zero
+        ((A & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // Rotate n left
+    inline void RLC(byte & reg)
+    {
+        // Reset N and H flag
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // If MSB is high, set carry flag
+        if ((reg & 0x80) >> 7)
+        {
+            SETBIT(F, CARRY_FLAG_BIT);
+            reg = ((reg << 1) & 0xFE) | 0x01;
+        }
+        else
+        {
+            CLRBIT(F, CARRY_FLAG_BIT);
+            reg = ((reg << 1) & 0xFE);
+        }
+
+        // Detect zero
+        ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // Rotate A left with carry
+    inline void RLA()
+    {
+        // Reset N and H flag
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+
+        // If MSB is high, set carry flag and add the previous carry flag bit to LSB
+        if ((A & 0x80) >> 7)
+        {
+            A = (A << 1) & 0xFE;
+            A |= ((F & CARRY_FLAG) >> CARRY_FLAG_BIT);
+            SETBIT(F, CARRY_FLAG_BIT);
+        }
+        else
+        {
+            A = (A << 1) & 0xFE;
+            A |= ((F & CARRY_FLAG) >> CARRY_FLAG_BIT);
+            CLRBIT(F, CARRY_FLAG_BIT);
+        }
+
+        // Detect zero
+        ((A & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // Rotate n left with carry
+    inline void RL(byte & reg)
+    {
+        // Reset N and H flag
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+
+        // If MSB is high, set carry flag and add the previous carry flag bit to LSB
+        if ((reg & 0x80) >> 7)
+        {
+            reg = (reg << 1) & 0xFE;
+            reg |= ((F & CARRY_FLAG) >> CARRY_FLAG_BIT);
+            SETBIT(F, CARRY_FLAG_BIT);
+        }
+        else
+        {
+            reg = (reg << 1) & 0xFE;
+            reg |= ((F & CARRY_FLAG) >> CARRY_FLAG_BIT);
+            CLRBIT(F, CARRY_FLAG_BIT);
+        }
+
+        // Detect zero
+        ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // Rotate A right
+    inline void RRCA()
+    {
+        // Reset N and H flag
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // If LSB is high, set carry flag
+        if ((A & 0x01) >> 7)
+        {
+            SETBIT(F, CARRY_FLAG_BIT);
+            A = ((A >> 1) & 0x7F) | 0x80;
+        }
+        else
+        {
+            CLRBIT(F, CARRY_FLAG_BIT);
+            A = ((A << 1) & 0x7F);
+        }
+
+        // Detect zero
+        ((A & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // Rotate n right
+    inline void RRC(byte & reg)
+    {
+        // Reset N and H flag
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // If LSB is high, set carry flag
+        if ((reg & 0x01) >> 7)
+        {
+            SETBIT(F, CARRY_FLAG_BIT);
+            reg = ((reg >> 1) & 0x7F) | 0x80;
+        }
+        else
+        {
+            CLRBIT(F, CARRY_FLAG_BIT);
+            reg = ((reg << 1) & 0x7F);
+        }
+
+        // Detect zero
+        ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // Rotate A right through carry
+    inline void RRA()
+    {
+        // Reset N and H flag
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // If LSB is high, set carry flag
+        if ((A & 0x01) >> 7)
+        {
+            A = ((A >> 1) & 0x7F);
+            A |= (((F & CARRY_FLAG) >> CARRY_FLAG_BIT) << 7);
+            SETBIT(F, CARRY_FLAG_BIT);
+        }
+        else
+        {
+            A = ((A << 1) & 0x7F);
+            A |= (((F & CARRY_FLAG) >> CARRY_FLAG_BIT) << 7);
+            CLRBIT(F, CARRY_FLAG_BIT);
+        }
+
+        // Detect zero
+        ((A & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // Rotate n right through carry
+    inline void RR(byte & reg)
+    {
+        // Reset N and H flag
+        CLRBIT(F, SUBTRACT_FLAG_BIT);
+        CLRBIT(F, HALF_CARRY_FLAG_BIT);
+
+        // If LSB is high, set carry flag
+        if ((reg & 0x01) >> 7)
+        {
+            reg = ((reg >> 1) & 0x7F);
+            reg |= (((F & CARRY_FLAG) >> CARRY_FLAG_BIT) << 7);
+            SETBIT(F, CARRY_FLAG_BIT);
+        }
+        else
+        {
+            reg = ((reg << 1) & 0x7F);
+            reg |= (((F & CARRY_FLAG) >> CARRY_FLAG_BIT) << 7);
+            CLRBIT(F, CARRY_FLAG_BIT);
+        }
+
+        // Detect zero
+        ((reg & 0xFF) == 0x00 ? SETBIT(F, ZERO_FLAG_BIT) : CLRBIT(F, ZERO_FLAG_BIT));
+    }
+
+    // JP cc
+    inline void JP()
+    {
+        // Get the LSB first
+        byte lsb = MEM[PC++];
+        byte msb = MEM[PC++];
+
+        PC = CASTWD(msb, lsb);
+    }
+
+    // JR cc
+    inline void JR()
+    {
+        // Get the immediate byte
+        byte n = MEM[PC++];
+
+        PC += n;
+    }
+
+    // CALL cc
+    inline void CALL()
+    {
+        // Get the immediate instruction
+        byte lsb = MEM[PC++];
+        byte msb = MEM[PC++];
+
+        // Push the address of the next instruction onto the stack
+        PUSH(((PC) >> 8), ((PC) & 0x00FF));
+
+        PC = CASTWD(msb, lsb);
+    }
+
+    // RESET
+    inline void RST(byte n)
+    {
+        // Push the address of the current instruction onto the stack
+        PUSH(((PC) >> 8), ((PC) & 0x00FF));
+
+        // Jump to the address $0000 + n
+        PC = CASTWD(0x00, n);
+    }
+
+    // RET cc
+    inline void RET()
+    {
+        // Get the immediate instruction
+        byte lsb;
+        byte msb;
+
+        // Push the address of the next instruction onto the stack
+        POP(msb, lsb);
+
+        PC = CASTWD(msb, lsb);
+    }
+
 	/*
 	CPU Opcode Execution Instruction Macros
 	*/
 
-	void OP00(){ cout << "Hello world!" << endl;  }
+	void OP00(){ cout << "Hello world!" << endl; cycles += 4;  } // NOP
 	void OP01(){ LD(B, MEM[PC++]); LD(C, MEM[PC++]); cycles += 12; }
 	void OP02(){ LD(MEM[CASTWD(B, C)], A); cycles += 8; }
 	void OP03(){ INC(B, C); cycles += 8; }
 	void OP04(){ INCR(B); cycles += 4; }
 	void OP05(){ DECR(B); cycles += 4; }
 	void OP06(){ LD(B, MEM[PC++]); cycles += 8; }
-	void OP07(){ }
+	void OP07(){ RLCA(); cycles += 4; }
 	void OP08(){ LD(MEM[CASTWD(MEM[PC++], MEM[PC++]) ], SP & 0xFF); cycles += 20; }
 	void OP09(){ ADD(CASTWD(B, C)); cycles += 8; }
 	void OP0A(){ LD(A, MEM[CASTWD(B, C)]); cycles += 8; }
@@ -272,58 +573,59 @@ public:
 	void OP0C(){ INCR(C); cycles += 4; }
 	void OP0D(){ DECR(C); cycles += 4; }
 	void OP0E(){ LD(C, MEM[PC++]); cycles += 8; }
-	void OP0F(){ }
+	void OP0F(){ RRCA(); cycles += 4; }
 
-	void OP10(){ }
+	void OP10(){ cycles += 4; /* TODO: HALT CPU and LCD display until button pressed */ } // STOP
 	void OP11(){ LD(D, MEM[PC++]); LD(E, MEM[PC++]); cycles += 12; }
 	void OP12(){ LD(MEM[CASTWD(D, E)], A); cycles += 8; }
 	void OP13(){ INC(D, E); cycles += 8; }
 	void OP14(){ INCR(D); cycles += 4; }
 	void OP15(){ DECR(D); cycles += 4; }
 	void OP16(){ LD(D, MEM[PC++]); cycles += 8; }
-	void OP17(){ }
-	void OP18(){ }
+	void OP17(){ RLA(); cycles += 4; }
+	void OP18(){ JR(); cycles += 8; }
 	void OP19(){ ADD(CASTWD(D, E)); cycles += 8; }
 	void OP1A(){ LD(A, MEM[CASTWD(D, L)]); cycles += 8; }
 	void OP1B(){ DEC(D, E); cycles += 8; }
 	void OP1C(){ INCR(E); cycles += 4; }
 	void OP1D(){ DECR(E); cycles += 4; }
 	void OP1E(){ LD(E, MEM[PC++]); cycles += 8; }
-	void OP1F(){ }
+	void OP1F(){ RRA(); cycles += 4; }
 
-	void OP20(){ }
+	void OP20(){ if (!(F & ZERO_FLAG)) JR(); cycles += 8; }
 	void OP21(){ LD(H, MEM[PC++]); LD(L, MEM[PC++]); cycles += 12; }
 	void OP22(){ LD(MEM[CASTWD(H, L)], A); INC(H, L); cycles += 8; }
 	void OP23(){ INC(H, L); cycles += 8; }
 	void OP24(){ INCR(H); cycles += 4; }
 	void OP25(){ DECR(H); cycles += 4; }
 	void OP26(){ LD(H, MEM[PC++]); cycles += 8; }
-	void OP27(){ }
-	void OP28(){ }
+	void OP27(){ DAA(); cycles += 4; }
+	void OP28(){ if ((F & ZERO_FLAG)) JR(); cycles += 8; }
 	void OP29(){ ADD(CASTWD(H, L)); cycles += 8; }
 	void OP2A(){ LD(A, MEM[CASTWD(H, L)]); INC(H, L); cycles += 8; }
 	void OP2B(){ DEC(H, L); cycles += 8; }
 	void OP2C(){ INCR(L); cycles += 4; }
 	void OP2D(){ DECR(L); cycles += 4; }
 	void OP2E(){ LD(L, MEM[PC++]); cycles += 8; }
-	void OP2F(){ }
+	void OP2F(){ A = ~A; SETBIT(F, SUBTRACT_FLAG_BIT); SETBIT(F, HALF_CARRY_FLAG_BIT); cycles += 4; }
 
-	void OP30(){ }
+	void OP30(){ if (!(F & CARRY_FLAG)) JR(); cycles += 8; }
 	void OP31(){ LD(SP, CASTWD(MEM[PC++], MEM[PC++])); cycles += 12; }
 	void OP32(){ LD(MEM[CASTWD(H, L)], A); DEC(H, L); cycles += 8; }
 	void OP33(){ ++SP; cycles += 8; }
 	void OP34(){ INCR(MEM[CASTWD(H, L)] ); cycles += 12; }
 	void OP35(){ DECR(MEM[CASTWD(H, L)]); cycles += 12; }
 	void OP36(){ LD(MEM[CASTWD(H, L)], MEM[PC++]); cycles += 12; }
-	void OP37(){ }
-	void OP38(){ }
+	void OP37(){ SETBIT(F, HALF_CARRY_FLAG_BIT); CLRBIT(F, SUBTRACT_FLAG_BIT); CLRBIT(F, HALF_CARRY_FLAG_BIT); cycles += 4; }
+	void OP38(){ if ((F & CARRY_FLAG)) JR(); cycles += 8; }
 	void OP39(){ ADD(SP); cycles += 8; }
 	void OP3A(){ LD(A, MEM[CASTWD(H, L)]); DEC(H, L); cycles += 8; }
 	void OP3B(){ --SP; cycles += 8; }
 	void OP3C(){ INCR(A); cycles += 4; }
 	void OP3D(){ DECR(A); cycles += 4; }
 	void OP3E(){ LD(A, MEM[PC++]); cycles += 8; }
-	void OP3F(){ }
+	void OP3F(){ ((F & CARRY_FLAG) ? CLRBIT(F, CARRY_FLAG_BIT) : SETBIT(F, HALF_CARRY_FLAG_BIT)); cycles += 4; 
+                 SETBIT(F, SUBTRACT_FLAG_BIT); SETBIT(F, HALF_CARRY_FLAG_BIT); }
 
 	void OP40(){ LD(B, B); cycles += 4; }
 	void OP41(){ LD(B, C); cycles += 4; }
@@ -382,7 +684,7 @@ public:
 	void OP73(){ LD(MEM[CASTWD(H, L)], E); cycles += 8; }
 	void OP74(){ LD(MEM[CASTWD(H, L)], H); cycles += 8; }
 	void OP75(){ LD(MEM[CASTWD(H, L)], L); cycles += 8; }
-	void OP76(){ }
+	void OP76(){ while( MEM[INTERRUPT_FLAG] == 0x00 ); cycles += 4; } // HALT until an INTERRUPT occurs
 	void OP77(){ LD(MEM[CASTWD(H, L)], A); cycles += 8; }
 	void OP78(){ LD(A, B); cycles += 4; }
 	void OP79(){ LD(A, C); cycles += 4; }
@@ -461,39 +763,39 @@ public:
 	void OPBE(){ CP(A, MEM[CASTWD(H, L)]); cycles += 8; }
 	void OPBF(){ CP(A, A); cycles += 4; }
 
-	void OPC0(){ }
+	void OPC0(){ if (!(F & ZERO_FLAG)) RET(); cycles += 8; }
 	void OPC1(){ POP(B, C); cycles += 12; }
-	void OPC2(){ }
-	void OPC3(){ }
-	void OPC4(){ }
+	void OPC2(){ if( !(F & ZERO_FLAG) ) JP(); cycles += 12; }
+	void OPC3(){ JP(); cycles += 12; }
+	void OPC4(){ if (!(F & ZERO_FLAG)) CALL(); cycles += 12; }
 	void OPC5(){ PUSH(B, C); cycles += 16; }
 	void OPC6(){ ADD(A, MEM[PC++]); cycles += 8; }
-	void OPC7(){ }
-	void OPC8(){ }
-	void OPC9(){ }
-	void OPCA(){ }
+	void OPC7(){ RST( 0x00 ); cycles += 32; }
+	void OPC8(){ if ((F & ZERO_FLAG)) RET(); cycles += 8; }
+	void OPC9(){ RET(); cycles += 8; }
+	void OPCA(){ if ((F & ZERO_FLAG)) JP(); cycles += 12; }
 	void OPCB(){ /* PREFIX CB OPCODES - DO NOT USE. */}
-	void OPCC(){ }
-	void OPCD(){ }
+	void OPCC(){ if ((F & ZERO_FLAG)) CALL(); cycles += 12; }
+	void OPCD(){ CALL(); cycles += 12; } // CALL nn
 	void OPCE(){ ADD(A, MEM[PC++] + ((F & CARRY_FLAG) >> CARRY_FLAG_BIT)); cycles += 8; }
-	void OPCF(){ }
+	void OPCF(){ RST(0x08); cycles += 32; }
 
-	void OPD0(){ }
+	void OPD0(){ if (!(F & CARRY_FLAG)) RET(); cycles += 8; }
 	void OPD1(){ POP(D, E); cycles += 12; }
-	void OPD2(){ }
+	void OPD2(){ if (!(F & CARRY_FLAG)) JP(); cycles += 12; }
 	void OPD3(){ /* DO NOTHING - BLANK OPCODE */ }
-	void OPD4(){ }
+	void OPD4(){ if (!(F & CARRY_FLAG)) CALL(); cycles += 12; }
 	void OPD5(){ PUSH(D, E); cycles += 16; }
 	void OPD6(){ SUB(A, MEM[PC++]); cycles += 8; }
-	void OPD7(){ }
-	void OPD8(){ }
-	void OPD9(){ }
-	void OPDA(){ }
+	void OPD7(){ RST(0x10); cycles += 32; }
+	void OPD8(){ if ((F & CARRY_FLAG)) RET(); cycles += 8; }
+	void OPD9(){ RET(); MEM[INTERRUPT_ENABLE] = 0x01; cycles += 8;}
+	void OPDA(){ if ((F & CARRY_FLAG)) JP(); cycles += 12; }
 	void OPDB(){ /* DO NOTHING - BLANK OPCODE */ }
-	void OPDC(){ }
+	void OPDC(){ if ((F & CARRY_FLAG)) CALL(); cycles += 12; }
 	void OPDD(){ /* DO NOTHING - BLANK OPCODE */ }
-	void OPDE(){ }
-	void OPDF(){ }
+	void OPDE(){ } // TODO: Check if this opcode exists
+	void OPDF(){ RST(0x18); cycles += 32; }
 
 	void OPE0(){ LD(MEM[0xFF00 + MEM[PC++]], A); cycles += 12; }
 	void OPE1(){ POP(H, L); cycles += 12; }
@@ -502,36 +804,81 @@ public:
 	void OPE4(){ /* DO NOTHING - BLANK OPCODE */ }
 	void OPE5(){ PUSH(H, L); cycles += 16; }
 	void OPE6(){ AND(A, MEM[PC++]); cycles += 8; }
-	void OPE7(){ }
-	void OPE8(){ }
-	void OPE9(){ }
+	void OPE7(){ RST(0x20); cycles += 32; }
+	void OPE8(){ ADDSP(); cycles += 16; }
+	void OPE9(){ PC = CASTWD(H,L); cycles += 4; } // JP (HL)
 	void OPEA(){ LD(MEM[CASTWD(MEM[PC++], MEM[PC++])], A); cycles += 16; }
 	void OPEB(){ /* DO NOTHING - BLANK OPCODE */ }
 	void OPEC(){ /* DO NOTHING - BLANK OPCODE */ }
 	void OPED(){ /* DO NOTHING - BLANK OPCODE */ }
     void OPEE(){ XOR(A, MEM[PC++]); cycles += 8; }
-	void OPEF(){ }
+	void OPEF(){ RST(0x28); cycles += 32; }
 
 	void OPF0(){ LD(A, MEM[0xFF00 + MEM[PC++]]); cycles += 12; }
 	void OPF1(){ POP(A, F); cycles += 12; }
 	void OPF2(){ LD(A, MEM[0xFF00 + C]); cycles += 8; }
-	void OPF3(){ }
+	void OPF3(){ DI_Executed = true; cycles += 4; } // DI
 	void OPF4(){ /* DO NOTHING - BLANK OPCODE */ }
 	void OPF5(){ PUSH(A, F); cycles += 16; }
-	void OPF6(){ }
-	void OPF7(){ }
+	void OPF6(){ OR(A, MEM[PC++]); cycles += 8; }
+	void OPF7(){ RST(0x30); cycles += 32; }
 	void OPF8(){ LD(H, (SP + MEM[PC]) >> 8); LD(L, (SP + MEM[PC++]) & 0xFF); cycles += 12; } // TODO: Status flag settings
 	void OPF9(){ LD(SP, CASTWD(H, L)); cycles += 8; }
 	void OPFA(){ LD(A, MEM[CASTWD(MEM[PC++], MEM[PC++])]); cycles += 16; }
-	void OPFB() { }
+    void OPFB(){ DI_Executed = false; cycles += 4; } // EI
 	void OPFC(){ /* DO NOTHING - BLANK OPCODE */ }
 	void OPFD(){ /* DO NOTHING - BLANK OPCODE */ }
 	void OPFE(){ CP(A, MEM[PC++]); cycles += 8; }
-	void OPFF(){ }
+	void OPFF(){ RST(0x38); cycles += 32; }
 	
 
-	// left off on pg 94
+    /* CB Operations */
 
+    void CBOP00(){ RLC(B); cycles += 8;}
+    void CBOP01(){ RLC(C); cycles += 8;}
+    void CBOP02(){ RLC(D); cycles += 8;}
+    void CBOP03(){ RLC(E); cycles += 8;}
+    void CBOP04(){ RLC(H); cycles += 8;}
+    void CBOP05(){ RLC(L); cycles += 8;}
+    void CBOP06(){ RLC(MEM[CASTWD(H, L)]); cycles += 16;}
+    void CBOP07(){ RLC(A); cycles += 8;}
+    void CBOP08(){ RRC(B); cycles += 8; }
+    void CBOP09(){ RRC(C); cycles += 8; }
+    void CBOP0A(){ RRC(D); cycles += 8; }
+    void CBOP0B(){ RRC(E); cycles += 8; }
+    void CBOP0C(){ RRC(H); cycles += 8; }
+    void CBOP0D(){ RRC(L); cycles += 8; }
+    void CBOP0E(){ RRC(MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP0F(){ RRC(A); cycles += 8; }
+
+    void CBOP10(){ RL(B); cycles += 8; }
+    void CBOP11(){ RL(C); cycles += 8; }
+    void CBOP12(){ RL(D); cycles += 8; }
+    void CBOP13(){ RL(E); cycles += 8; }
+    void CBOP14(){ RL(H); cycles += 8; }
+    void CBOP15(){ RL(L); cycles += 8; }
+    void CBOP16(){ RL(MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP17(){ RL(A); cycles += 8; }
+    void CBOP18(){ RR(B); cycles += 8; }
+    void CBOP19(){ RR(C); cycles += 8; }
+    void CBOP1A(){ RR(D); cycles += 8; }
+    void CBOP1B(){ RR(E); cycles += 8; }
+    void CBOP1C(){ RR(H); cycles += 8; }
+    void CBOP1D(){ RR(L); cycles += 8; }
+    void CBOP1E(){ RR(MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP1F(){ RR(A); cycles += 8; }
+
+    void CBOP30(){ SWAP(B); cycles += 8; }
+    void CBOP31(){ SWAP(C); cycles += 8; }
+    void CBOP32(){ SWAP(D); cycles += 8; }
+    void CBOP33(){ SWAP(E); cycles += 8; }
+    void CBOP34(){ SWAP(H); cycles += 8; }
+    void CBOP35(){ SWAP(L); cycles += 8; }
+    void CBOP36(){ SWAP(MEM[CASTWD(H, L)]); cycles += 16; }
+    void CBOP37(){ SWAP(A); cycles += 8; }
+
+
+    // left off on pg 105 - 110 for remaining shit CB opcodes
 };
 
 
