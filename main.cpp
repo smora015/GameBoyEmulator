@@ -13,10 +13,22 @@ using namespace std;
 int main(int argc, char **argv)
 {
 	// Instantiate classes
-	GBCartridge ROM = GBCartridge("");
-	GBCPU CPU = GBCPU();
-    CPU.execute();
+    GBCPU CPU = GBCPU();
+    GBCartridge ROM = GBCartridge("cpu_instrs.gb");
+	
+    // Load ROM data and initialize CPU/PPU
+    ROM.load_rom(CPU);
+    CPU.init();
 
+
+    string temp;
+    int count = 100;
+    while ((count--) > 0)
+    {
+        CPU.execute();
+        //Sleep(1000);
+    }
+    
     //cout << "Finished executing instructions..." << endl;
 
 	//while (1);

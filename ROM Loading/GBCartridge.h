@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <string>
+#include <fstream>
+#include "GBCPU.h"
 using namespace std;
 
 class GBCartridge
@@ -15,8 +17,8 @@ public:
 
 	~GBCartridge();
 
-	void load_rom();
-	void load_rom(string rom_name);
+	void load_rom(GBCPU & cpu);
+	void load_rom(string rom_name, GBCPU & cpu);
 };
 
 #endif /* GBCartridge.h */
