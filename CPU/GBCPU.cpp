@@ -189,7 +189,7 @@ GBCPU::~GBCPU()
 
 void GBCPU::execute()
 {
-    printf("PC: $%X OPCODE: %X AF: 0x%X%X BC: 0x%X%X DE: 0x%X%X HL: 0x%X%X SP: 0x%X \n", PC, MEM[PC], A, B, C, D, E, F, H, L, SP);
+    printf("PC: $%X OPCODE: %X AF: 0x%X%X BC: 0x%X%X DE: 0x%X%X HL: 0x%X%X SP: 0x%X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
 	(this->*(opcodes)[MEM[PC]])();
 }
 
@@ -201,12 +201,14 @@ void GBCPU::init()
     PC = 0x100;
 
     // For GB, set to this value. For others, will be different
-    A = (byte) 0x01;
-    F = (byte) 0xB0;
+    A = (byte) 0x11; //0x01;
+    SetF(0x80);      //0xB0;
     B = (byte) 0x00;
-    C = (byte) 0x13;
-    D = (byte) 0x00; E = (byte) 0xD8;
-    H = (byte) 0x01; L = (byte) 0x4D;
+    C = (byte) 0x00; //0x13;
+    D = (byte) 0xFF; //0x00; 
+    E = (byte) 0x56; //0xD8;
+    H = (byte) 0x00; //0x01; 
+    L = (byte) 0x0D; //0x4D;
     SP = (word) 0xFFFE;
 
     MEM[0xFF05] = (byte) 0x00;

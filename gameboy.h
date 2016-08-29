@@ -23,22 +23,8 @@ typedef unsigned short word;
 #define MAX_GB_MAIN_RAM      0x2000  // 8k Main Working RAM
 #define MAX_GB_VID_RAM       0x2000  // 8k Video RAM
 
-// LOAD macros
-#define LD(nn, n)    nn = n
-
 // Cast LSB and MSB as a WORD (16 bits)
 #define CASTWD(x, y) (((((word)x) << 8) & 0xFF00) | ((word)y) & 0x00FF)
-
-// Decrement and Increment macros (note: this is not the actual DEC and INC opcode. See DECR, INCR
-#define DEC(x, y)    word temp = (CASTWD(x,y) - 1) & 0xFFFF; \
-                     x = (byte)((temp >> 8) & 0xFF); \
-                     y = (byte)((temp) & 0xFF);
-
-#define INC(x, y)    word temp = (CASTWD(x,y) + 1) & 0xFFFF; \
-                     x = (byte)((temp >> 8) & 0xFF); \
-                     y = (byte)((temp) & 0xFF);
-
-
 
 // PUSH/POP to/from stack
 #define PUSH(x, y)   MEM[SP] = y; --SP; MEM[SP] = x; --SP;         // PUSH stores LSB first, then MSB
@@ -58,21 +44,6 @@ typedef unsigned short word;
 #define MAX_SPRITES_COL      16
 #define MIN_SPRITES_ROW      8
 #define MIN_SPRITES_COL      8
-
-/*
-	Status Register Definitions
-
-    b8. 0 0 0 0 | 0 0 0 0 .b0
-      . Z S H C | - - - - .        
-*/
-#define CARRY_FLAG			 0x10
-#define CARRY_FLAG_BIT       4
-#define HALF_CARRY_FLAG		 0x20
-#define HALF_CARRY_FLAG_BIT  5
-#define SUBTRACT_FLAG		 0x40
-#define SUBTRACT_FLAG_BIT    6
-#define ZERO_FLAG			 0x80
-#define ZERO_FLAG_BIT        7    
 
 /*
 	Interrupt Flag Definitions - Highest Priority = Lowest Bit (0)
