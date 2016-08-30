@@ -994,9 +994,9 @@ public:
     void OPDE(){ SUB(A, MEM[++PC] + (CARRY_FLAG == true)); cycles = 8; }
     void OPDF(){ RST(0x18); cycles = 32; }
     
-    void OPE0(){ LD(MEM[0xFF00 + MEM[++PC]], A); ++PC; cycles = 12; }
+    void OPE0(){ cout << " Loading A: " << A << " onto 0xFF00 + " << MEM[0xFF00 + MEM[PC + 1]] << "!\n"; LD(MEM[0xFF00 + MEM[++PC]], A); ++PC; cycles = 12; }
     void OPE1(){ POP(H, L); ++PC; cycles = 12; }
-    void OPE2(){ LD(MEM[0xFF00 + C], A); ++PC; cycles = 8; }
+    void OPE2(){ cout << " Loading A: + " << A << " onto 0xFF00 + " << MEM[0xFF00 + C] << "!\n"; LD(MEM[0xFF00 + C], A); ++PC; cycles = 8; }
     void OPE3(){ /* DO NOTHING - BLANK OPCODE */ }
     void OPE4(){ /* DO NOTHING - BLANK OPCODE */ }
     void OPE5(){ PUSH(H, L); ++PC; cycles = 16; }
@@ -1011,9 +1011,9 @@ public:
     void OPEE(){ XOR(A, MEM[++PC]); cycles = 8; }
     void OPEF(){ RST(0x28); cycles = 32; }
     
-    void OPF0(){ LD(A, MEM[0xFF00 + MEM[++PC]]); ++PC; cycles = 12; }
+    void OPF0(){ cout << " Loading " << MEM[0xFF00 + MEM[PC+1]] << " onto A!\n"; LD(A, MEM[0xFF00 + MEM[++PC]]); ++PC; cycles = 12; }
     void OPF1(){ byte temp = 0x00; POP(A, temp); SetF(temp); ++PC; cycles = 12; }
-    void OPF2(){ LD(A, MEM[0xFF00 + C]); ++PC; cycles = 8; }
+    void OPF2(){ cout << " Loading " << MEM[0xFF00 + C] << " onto A!\n"; LD(A, MEM[0xFF00 + C]); ++PC; cycles = 8; }
     void OPF3(){ DI_Executed = true; ++PC; cycles = 4; } // DI
     void OPF4(){ /* DO NOTHING - BLANK OPCODE */ }
     void OPF5(){ PUSH(A, GetF()); ++PC; cycles = 16; }
