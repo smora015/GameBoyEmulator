@@ -26,6 +26,18 @@ typedef unsigned short word;
 // Cast LSB and MSB as a WORD (16 bits)
 #define CASTWD(x, y) (((((word)x) << 8) & 0xFF00) | ((word)y) & 0x00FF)
 
+// LOAD
+#define LD(nn, n) nn = n
+
+// Decrement and Increment macros (note: this is not the actual DEC and INC opcode. See DECR, INCR
+#define DEC(x, y) word temp = (CASTWD(x,y) - 1) & 0xFFFF; \
+                      x = (byte)((temp >> 8) & 0xFF); \
+                      y = (byte)((temp) & 0xFF);
+
+#define INC(x, y) word temp = (CASTWD(x,y) + 1) & 0xFFFF; \
+                      x = (byte)((temp >> 8) & 0xFF); \
+                      y = (byte)((temp) & 0xFF);
+
 // PUSH/POP to/from stack
 #define PUSH(x, y)   MEM[SP] = y; --SP; MEM[SP] = x; --SP;         // PUSH stores LSB first, then MSB
 #define POP(x, y)    ++SP; x = MEM[SP]; ++SP; y = MEM[SP];         // POP loads MSB first, then LSB

@@ -1,6 +1,5 @@
 #include "GBCPU.h"
 #include "gameboy.h"
-
 // Game Boy CPU class function definitions
 /*
 

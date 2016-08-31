@@ -5,8 +5,8 @@
 #include "gameboy.h"
 
 // OpenGL Libraries
-#include "Dependencies\glew\glew.h"
-#include "Dependencies\freeglut\freeglut.h"
+#include "glew.h"
+#include "freeglut.h"
 #include <math.h>
 
 // Renders a pixel at point <X, Y>

@@ -1,6 +1,6 @@
 #include "render.h"
-#include "Dependencies\glew\glew.h"
-#include "Dependencies\freeglut\freeglut.h"
+#include "glew.h"
+#include "freeglut.h"
 #include <stdio.h>
 //#include <GL/glut.h>
 
