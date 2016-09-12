@@ -11,24 +11,70 @@
 
 
 // writeByte - Write one byte to memory
-inline void GBCPU::writeByte(byte data, word addr)
+void GBCPU::writeByte(byte data, word addr)
 {
     // Check what memory region to write in
     MEM[addr] = data;
+
+    // If memory is written to WRAM or ECHO WRAM, write to both. Note: last 512 bytes not echoed.
+    if (addr >= WRAM_START && addr <= (WRAM_END - 0x200))
+    {
+        MEM[addr + (WRAM_ECHO_START - WRAM_START)] = data;
+    }
+    else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_END)
+    {
+        MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;
+    }
 }
 
-// readByte - Read immediate byte from memory
-inline byte GBCPU::readByte(word addr)
+void GBCPU::writeWord(word data, word addr)
+{
+    // Write LSB first
+    MEM[addr] = (byte)(data & 0xFF);
+    MEM[addr + 1] = (byte)((data >> 8) & 0xFF);
+
+
+    // If memory is written to WRAM or ECHO WRAM, write to both
+    if (addr >= WRAM_START && addr <= WRAM_END)
+    {
+        MEM[addr + (WRAM_ECHO_START - WRAM_START)] = (byte)(data & 0xFF);
+        MEM[addr + 1 + (WRAM_ECHO_START - WRAM_START)] = (byte)((data >> 8) & 0xFF);
+    }
+    else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_START)
+    {
+        MEM[addr + (WRAM_ECHO_START - WRAM_START)] = (byte)(data & 0xFF);
+        MEM[addr + 1 + (WRAM_ECHO_START - WRAM_START)] = (byte)((data >> 8) & 0xFF);
+    }
+}
+// readByte - Read byte from memory
+byte GBCPU::readByte(word addr)
 {
     return MEM[addr];
 }
 
-// ReadWord - Read immediate word from memory
-inline word GBCPU::readWord(word addr)
+// readImmByte - Read immediate byte from memory
+byte GBCPU::readImmByte()
+{
+    return MEM[PC + 1];
+}
+
+// ReadWord - Read word from memory
+word GBCPU::readWord(word addr)
 {
     // Get LSB byte first
     byte LSB = MEM[addr];
     byte MSB = MEM[addr + 1];
+
+    word temp = CASTWD(MSB, LSB);
+    return temp;
+}
+
+// ReadWord - Read word from memory
+word GBCPU::readImmWord()
+{
+    // Get LSB byte first
+    byte LSB = MEM[PC + 1];
+    byte MSB = MEM[PC + 2];
 
     word temp = CASTWD(MSB, LSB);
     return temp;
@@ -58,52 +104,52 @@ void GBCPU::SetF(byte F)
 }
 
 // Get A and F as a word
-inline word GBCPU::GetAF()
+word GBCPU::GetAF()
 {
     return CASTWD(A, GetF());
 }
 
 // Set A and F from a word
-inline void GBCPU::SetAF(word data)
+void GBCPU::SetAF(word data)
 {
     A = ((data >> 8) & 0xFF);
     SetF((data & 0xFF));
 }
 
 // Get B and C as a word
-inline word GBCPU::GetBC()
+word GBCPU::GetBC()
 {
     return CASTWD(B, C);
 }
 
 // Set B and C from a word
-inline void GBCPU::SetBC(word data)
+void GBCPU::SetBC(word data)
 {
     B = ((data >> 8) & 0xFF);
     C = (data & 0xFF);
 }
 
 // Get D and E as a word
-inline word GBCPU::GetDE()
+word GBCPU::GetDE()
 {
     return CASTWD(D, E);
 }
 
 // Set D and E from a word
-inline void GBCPU::SetDE(word data)
+void GBCPU::SetDE(word data)
 {
     D = ((data >> 8) & 0xFF);
     E = (data & 0xFF);
 }
 
 // Get H and L as a word
-inline word GBCPU::GetHL()
+word GBCPU::GetHL()
 {
     return CASTWD(H, L);
 }
 
 // Set H and L from a word
-inline void GBCPU::SetHL(word data)
+void GBCPU::SetHL(word data)
 {
     H = ((data >> 8) & 0xFF);
     L = (data & 0xFF);

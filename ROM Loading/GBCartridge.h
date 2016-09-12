@@ -1,12 +1,14 @@
 #ifndef _GBCARTRIDGE_H_
 #define _GBCARTRIDGE_H_
 
-#include <iostream>
-#include <string>
-#include <fstream>
 #include "GBCPU.h"
+#include <string>
+#include <iostream>
+#include <fstream>
+
 using namespace std;
 
+// @TODO: Remove class usage
 class GBCartridge
 {
 public:
@@ -19,6 +21,8 @@ public:
 
 	void load_rom(GBCPU & cpu);
 	void load_rom(string rom_name, GBCPU & cpu);
+
+    void extract_header(GBCPU & cpu);
 };
 
 #endif /* GBCartridge.h */

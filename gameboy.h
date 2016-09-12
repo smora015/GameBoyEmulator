@@ -6,10 +6,8 @@
 // Audio file and macro definitions
 // Confirm if byte data type should be unsigned or not (for negative offset operations)
 // Decide if it's better to have an array holding the cycles count for each opcode
-// Decide if it's better to increment the PC during the instruction
-// Create a macro that reads and writes from/to memory to avoid opcode-specific bugs
 // Add headers to each file with descriptions of code
-// CPU Start up procedure
+// CPU Start up procedure - half done
 // Research interrupt flag bits
 
 // Datatype Definitions
@@ -19,21 +17,19 @@ typedef unsigned short word;
 /*
 	CPU Definitions and Macros
 */
-#define MAX_GB_MEMORY        0x10000 // 64k of byte-addresable memory
-#define MAX_GB_MAIN_RAM      0x2000  // 8k Main Working RAM
-#define MAX_GB_VID_RAM       0x2000  // 8k Video RAM
 
 // Cast LSB and MSB as a WORD (16 bits)
 #define CASTWD(x, y) (((((word)x) << 8) & 0xFF00) | ((word)y) & 0x00FF)
 
-// LOAD
+// LOAD macro
 #define LD(nn, n) nn = n
 
-// Decrement and Increment macros (note: this is not the actual DEC and INC opcode. See DECR, INCR
+// Decrement macro (note: this is not the actual DEC and INC opcode. See DECR, INCR)
 #define DEC(x, y) word temp = (CASTWD(x,y) - 1) & 0xFFFF; \
                       x = (byte)((temp >> 8) & 0xFF); \
                       y = (byte)((temp) & 0xFF);
 
+// Increment macro (note: this is not the actual DEC and INC opcode. See DECR, INCR)
 #define INC(x, y) word temp = (CASTWD(x,y) + 1) & 0xFFFF; \
                       x = (byte)((temp >> 8) & 0xFF); \
                       y = (byte)((temp) & 0xFF);
@@ -46,6 +42,53 @@ typedef unsigned short word;
 #define SETBIT(val, bit) val |= (0x01 << bit)
 #define CLRBIT(val, bit) val &= ~(0x01 << bit)
 
+
+/*	CPU Address Space Definitions
+Courtesy: https://realboyemulator.wordpress.com/
+
+0x0000 - 0x3FFF Permanently-mapped ROM bank
+0x4000 - 0x7FFF Area for switchable ROM banks
+
+0xFE00 - 0xFEFF Sprite Attribute Table
+
+0xFF00 - 0xFF7F Device's Mappings. I/O Device Access
+
+0xFF90 - 0xFFFE High RAM Area
+*/
+
+#define INTERRUPT_ENABLE	 0xFFFF  // $FFFF - IE - Interrupt Enable (1 = Enabled) address
+
+#define HRAM_END             0xFFFE  // High RAM ending address
+#define HRAM_START           0xFF80  // High RAM, otherwise known as Zero Page beginning address
+
+#define INTERRUPT_FLAG		 0xFF0F  // $FF0F - IF - Interrupt Flag - (1 = Requested) address
+                                     // Bits 3 - 0: Joypad - Serial - Timer - LCD St - V-Blank (lower bit = high pri.)
+
+#define SPRITE_TABLE_END     0xFEFF  // Sprite Attribute table ending address
+#define SPRITE_TABLE_START   0xFE00  // Sprite Attribute table begninning address
+
+#define WRAM_ECHO_END        0xFDFF  // Working RAM bank 0/1 echo data ending address
+#define WRAM_ECHO_START      0xE000  // Working RAM bank 0/1 echo data beginning address
+
+#define WRAM_END             0xDFFF  // Working RAM ending address
+#define WRAM_START           0xC000  // Working RAM beginning address
+
+#define EXTERNAL_RAM_END     0xBFFF  // External RAM ending address (switchable RAM)
+#define EXTERNAL_RAM_START   0xA000  // External RAM beginning address (switchable RAM)
+
+#define VRAM_END             0x9FFF  // Video RAM ending address
+#define BG_MAP_1_START       0x9C00  // BG Map Data 2
+#define BG_MAP_0_START       0x9800  // BG Map Data 1
+#define VRAM_START           0x8000  // Video RAM beginning address
+
+#define EXTERNAL_ROM_END     0x7FFF  // External ROM ending address (switchable ROM)
+#define EXTERNAL_ROM_START   0x4000  // External ROM beginning address (switchable ROM)
+
+#define ROM_END              0x3FFF  // ROM Bank #0 ending address
+#define ROM_START            0x0000  // ROM Bank #0 beginning address
+
+#define MAX_GB_MEMORY        0x10000 // 64k of byte-addresable memory
+
 /*
 	Picture Processing Unit Definitions
 */
@@ -57,15 +100,6 @@ typedef unsigned short word;
 #define MIN_SPRITES_ROW      8
 #define MIN_SPRITES_COL      8
 
-/*
-	Interrupt Flag Definitions - Highest Priority = Lowest Bit (0)
-	FFFF - IE - Interrupt Enable (1 = Enabled)
-	FF0F - IF - Interrupt Flag	 (1 = Request)
 
- b8|0		0		0		0		0		0		0		0|b0
-	-		-		-		Joypad	Serial	Timer	LCD St	V-Blank	
-*/
-#define INTERRUPT_ENABLE	0xFFFF
-#define INTERRUPT_FLAG		0xFF0F
 
 #endif /* GAMEBOY_H_ */

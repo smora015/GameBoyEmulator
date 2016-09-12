@@ -192,9 +192,17 @@ void GBCPU::execute()
 	(this->*(opcodes)[MEM[PC]])();
 }
 
+// printMEM - Debug function that prints entire contents of CPU memory into a file.
+void GBCPU::printMEM(string name)
+{
+    ofstream file(name, std::ios_base::binary);
+    file.write((char*)MEM, MAX_GB_MEMORY);
+    file.close();
+}
+
 void GBCPU::init()
 {
-    cout << "GBCPU initialing..." << endl;
+    cout << "GBCPU initializng...";
 
     // Initialize the registers with default values for program execution
     PC = 0x100;
@@ -242,6 +250,7 @@ void GBCPU::init()
     MEM[0xFF4B] = (byte) 0x00;
     MEM[0xFFFF] = (byte) 0x00;
 
+    cout << "done!" << endl;
 }
 
 

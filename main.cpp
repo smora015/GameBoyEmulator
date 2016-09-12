@@ -20,7 +20,10 @@ int main(int argc, char **argv)
     ROM.load_rom(CPU);
     CPU.init();
 
+    // Capture memory data into a file for debug purposes after initialization of CPU
+    CPU.printMEM("memory_map.txt");
 
+    // Start executing CPU instructions
     string temp;
     int count = 100;
     while ((count--) > 0)
@@ -29,7 +32,8 @@ int main(int argc, char **argv)
         //Sleep(1000);
     }
     
-    //cout << "Finished executing instructions..." << endl;
+ 
+    cout << "Finished executing instructions..." << endl;
 
 	//while (1);
 	/* Implementation priorities (1 == do first, 2+ == do after, from top-bottom order)

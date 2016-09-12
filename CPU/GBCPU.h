@@ -3,6 +3,7 @@
 
 #include "gameboy.h"
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -13,25 +14,6 @@ using namespace std;
 class GBCPU
 {
 public:
-	/*	CPU Address Space Definitions
-		Courtesy: https://realboyemulator.wordpress.com/
-
-		0x0000 - 0x3FFF Permanently-mapped ROM bank
-		0x4000 - 0x7FFF Area for switchable ROM banks
-
-		0x8000 - 0x9FFF Video RAM
-		0xA000 - 0xBFFF Switchable External RAM bank
-		0xC000 - 0xCFFF Game Boy's working RAM bank 0
-		0xD000 - 0xDFFF Game Boy's working RAM bank 1
-		0xE000 - 0xFDFF Echo of Game Boy's working RAM bank 0 and 1
-
-		0xFE00 - 0xFEFF Sprite Attribute Table
-
-		0xFF00 - 0xFF7F Device's Mappings. I/O Device Access
-
-		0xFF90 - 0xFFFE High RAM Area
-
-		0xFFFF			Interrupt Enable Register	*/
 	byte MEM[MAX_GB_MEMORY]; 	// CPU Memory (PRG) Currently 64K max size
 	word ADDR;					// CPU Address Bus
 	byte DATA;					// CPU Data Bus
@@ -59,23 +41,30 @@ public:
 	GBCPU();					// Constructor
 	~GBCPU();					// Deconstructor
 
-    /***** Memory Access functions - memory.cpp *****/
-    inline void writeByte(byte data, word addr);
-    inline byte readByte(word addr);
-    inline word readWord(word addr);
+    /***** Memory Access functions - memory.cpp/mbc.cpp *****/
+    void MBC1write(word addr, byte data);
+    void MBC1read(word addr);
+    void writeByte(byte data, word addr);
+    void writeWord(word data, word addr);
+    byte readByte(word addr);
+    byte readImmByte();
+    word readWord(word addr);
+    word readImmWord();
 
     byte GetF(); // Get Status Register as a byte
     void SetF(byte F); // Set Status register from a byte
 
-    inline word GBCPU::GetAF();
-    inline void GBCPU::SetAF(word data);
-    inline word GBCPU::GetBC();
-    inline void GBCPU::SetBC(word data);
-    inline word GBCPU::GetDE();
-    inline void GBCPU::SetDE(word data);
-    inline word GBCPU::GetHL();
-    inline void GBCPU::SetHL(word data);
+    word GBCPU::GetAF();
+    void GBCPU::SetAF(word data);
+    word GBCPU::GetBC();
+    void GBCPU::SetBC(word data);
+    word GBCPU::GetDE();
+    void GBCPU::SetDE(word data);
+    word GBCPU::GetHL();
+    void GBCPU::SetHL(word data);
 
+    /***** Debug Functions - GBCPU.cpp *****/
+    void printMEM(string name); // Print entire contents of CPU memory into a file
 
     /***** Main Functions - GBCPU.cpp *****/
 	void init();				// Game Boy initialization
