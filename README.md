@@ -11,8 +11,20 @@ The main guts of the GameBoy. These files contain the logic that parse and execu
  
 
 #### To Do
-- Verify all instructions work properly [In Progress as of 8/29]
-- Clean up code by separating macros and helper functions in separate files and ensuring all comments are verbose in explaining what exactly is happening
+##### CPU Execution
+- Implement check for interrupts
+- Implement check for DI_Executed (disabled interrupt) before execution instructions
+
+##### Memory Bank Controller access
+- Implement memory model configuration between 16/8 and 4/32 mode for MBC1
+- All other MBC modes
+ 
+##### CPU Opcodes
+- Clean up opcode helper functions
+- Remove all LD macros and replace with memory read and writes to utilize MBC functions
+- Add comments for all opcodes to describe functionality
+- Finish up opcodes $F8, %08, and $10 
+- Clean up functions to not be encapsulated in a class
 
 ## PPU
 The picture processing unit of the GameBoy. These files contain the logic that decodes the PRG and CHR ROM data to enable the rendering the sprite and tile data, with direction from the CPU.
@@ -24,10 +36,13 @@ The picture processing unit of the GameBoy. These files contain the logic that d
 These files contain the logic that parses through the cartridge (ROM) information and partitions the data according to the format.
 
 ### Features
-- Currently only works with Type #1 Cartridges (ROM only), no MBCs (memory bank controllers)
+- Imports contents of ROM
+- Parses cartridge header data
+- Initializes CPU memory
 
 #### To Do
-- Ensure ROM parsing works [In progress- testing with test roms first (Blarg's)]
+- Create structures to hold MBC, ROM size, and RAM size
+- Clean up code (redo code to not encapsulate functions in a class)
 
 ## Graphics
 OpenGL is utilized to enable rendering on Windows. Not yet tested on other formats, but FreeGLUT is used so hopefully it will be cross-platform.
