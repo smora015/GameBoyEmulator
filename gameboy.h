@@ -5,13 +5,12 @@
 // TODO:
 // Audio file and macro definitions
 // Confirm if byte data type should be unsigned or not (for negative offset operations)
-// Decide if it's better to have an array holding the cycles count for each opcode
-// Add headers to each file with descriptions of code
 // CPU Start up procedure - half done
 // Research interrupt flag bits
 
 // Datatype Definitions
 typedef unsigned char byte;
+typedef signed char signed_byte;
 typedef unsigned short word;
 
 /*

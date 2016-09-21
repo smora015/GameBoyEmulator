@@ -14,14 +14,15 @@ int main(int argc, char **argv)
 {
 	// Instantiate classes
     GBCPU CPU = GBCPU();
-    GBCartridge ROM = GBCartridge("cpu_instrs.gb");
 	
     // Load ROM data and initialize CPU/PPU
-    ROM.load_rom(CPU);
+    string default_rom = "cpu_instrs.gb";        // "Tetris (World).gb"
+    
+    load_rom( (argc < 2 ? default_rom : string(argv[1])), CPU );
     CPU.init();
 
     // Capture memory data into a file for debug purposes after initialization of CPU
-    CPU.printMEM("memory_map.txt");
+    //CPU.printMEM("memory_map.txt");
 
     // Start executing CPU instructions
     string temp;
@@ -31,7 +32,6 @@ int main(int argc, char **argv)
         CPU.execute();
         //Sleep(1000);
     }
-    
  
     cout << "Finished executing instructions..." << endl;
 
@@ -51,8 +51,6 @@ int main(int argc, char **argv)
 		3- Audio
 	*/
 
-
-	//
 	// Initialize/configure OpenGL Rendering function, then run main rendering loop.
 	//GLInit(&argc, argv);
 	//glColor3f(GLfloat(0.5), GLfloat(0.7), GLfloat(0.2) );

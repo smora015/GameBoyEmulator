@@ -15,8 +15,8 @@ class GBCPU
 {
 public:
 	byte MEM[MAX_GB_MEMORY]; 	// CPU Memory (PRG) Currently 64K max size
-	word ADDR;					// CPU Address Bus
-	byte DATA;					// CPU Data Bus
+	word ADDR;					// CPU Address Bus  - UNUSED
+	byte DATA;					// CPU Data Bus     - UNUSED
 	word SP;					// Stack Pointer
 	word PC;					// Program Counter
 	byte A;						// Accumulator Register
