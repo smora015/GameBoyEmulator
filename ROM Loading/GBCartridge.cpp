@@ -21,7 +21,7 @@ MBC_TYPES rom_mbc_type; // The MBC cartridge typebc_type;
 void load_rom(string rom_name, GBCPU & cpu)
 {
     // Initialize temp variables for reading data
-    char c = 0x00;          
+    char c = 0x00;
     unsigned int num_of_bytes = 0;
 
     // Open file and start reading bytes. Specify read as binary. '1A' would cause EOF as text read.
@@ -30,7 +30,7 @@ void load_rom(string rom_name, GBCPU & cpu)
     ifstream file(rom_name, std::ios_base::binary);
 
     // Get ROM bank #0 - $0000 - $3FFF
-    for(int i = 0; i <= ROM_END; ++i)
+    for (int i = 0; i <= ROM_END; ++i)
     {
         // Get next byte
         file.get(c);
@@ -47,15 +47,31 @@ void load_rom(string rom_name, GBCPU & cpu)
     // Calculate sizes of switchable memory to allocate memory properly
     initialize_rom_ram_size();
 
-    // Get all external (switchable) ROM banks (bank #1+)
-    for (unsigned int i = 0; i < ext_rom_size; ++i)
+    // Get second ROM bank if only 2 banks exist
+    if (ext_rom_size == 0)
     {
-        // Get next byte
-        file.get(c);
+        for (int i = 0; i <= (EXTERNAL_ROM_END - 0x4000); ++i)
+        {
+            // Get next byte
+            file.get(c);
 
-        // Populate external rom with data
-        ext_rom[i] = c;
-        ++num_of_bytes;
+            // Populate CPU Memory with data
+            cpu.MEM[i + EXTERNAL_ROM_START] = c;
+            ++num_of_bytes;
+        }
+    }
+    // Otherwise get all ROM banks if more than 2 exist
+    else
+    {
+        for (unsigned int i = 0; i < ext_rom_size; ++i)
+        {
+            // Get next byte
+            file.get(c);
+
+            // Populate external rom with data
+            ext_rom[i] = c;
+            ++num_of_bytes;
+        }
     }
 
     file.close();
@@ -326,18 +342,18 @@ void initialize_rom_ram_size()
 {
     cout << "Initializing external ROM and RAM...";
 
-    // Initialize ROM. We allocate -1 banks because the first bank is already in CPU memory
+    // Initialize ROM. We allocate -1 banks for ROM because the first bank will already be in CPU memory
     ext_rom_size = (rom_size < 0x4000 ? 0x00 : rom_size - 0x4000);
-    ext_ram_size = (ram_size < 0x2000 ? 0x00 : ram_size - 0x2000);
+    ext_ram_size = ram_size; // (ram_size < 0x2000 ? 0x00 : ram_size - 0x2000); For RAM, we do not because this refers to external only!
 
-    // Only zero out external ROM/RAM. ROM 
-    if (rom_size > 0x4000)
+    // Only zero out external ROM/RAM.
+    if (ext_rom_size > 0)
     {
         ext_rom = (byte *)malloc(ext_rom_size); // 16 KByte banks = 16384 bytes per piece
         memset(ext_rom, 0, ext_rom_size);
     }
 
-    if (ram_size > 0x2000)
+    if (ext_ram_size > 0)
     {
         ext_ram = (byte *)malloc(ext_ram_size); // 8 KByte banks = 8192 bytes per piece
         memset(ext_ram, 0, ext_ram_size);

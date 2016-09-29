@@ -19,40 +19,53 @@ bool ram_bank_access_enabled;    // Indicates if RAM read/writes are enabled
 // MBC1Write: Determines the appropriate bank switching selections 
 void GBCPU::MBC1write(word addr, byte data)
 {
+    // Write to external RAM if enabled
+    if ((addr >= EXTERNAL_RAM_START) && (addr <= EXTERNAL_RAM_END) &&
+        (ram_bank_access_enabled == true))
+    {
+        // Read the address at the current RAM bank number
+        ext_ram[current_ram_bank * 0x2000 + (addr - EXTERNAL_RAM_START)] = data;
+    }
+
     // A write (XXXX XXX1b) to the upper half of switchable ROM selects ROM/RAM configuration
-    if ((addr >= 0x6000) && (addr < EXTERNAL_ROM_END))
+    else if ((addr >= 0x6000) && (addr <= EXTERNAL_ROM_END))
     {
         if (data & 0x01)
         {
-            cout << "MBC1 selects 16/8 memory model" << endl;
-            memory_model = memory_model_16_8; // 16 Mbit ROM / 8 Kbyte RAM max model. (16 Mbit ROM = 2 Mbyte)
+            cout << "MBC1 selects to 4/32 memory model (RAM banking)" << endl;
+            memory_model = ram_banking; // 4 Mbit ROM / 32 Kbyte RAM max model. (4 Mbit ROM = 512 Kbyte)
         }
         else
         {
-            cout << "MBC1 selects to 4/32 memory model" << endl;
-            memory_model = memory_model_4_32; // 4 Mbit ROM / 32 Kbyte RAM max model. (4 Mbit ROM = 512 Kbyte)
+            cout << "MBC1 selects 16/8 memory model (ROM banking)" << endl;
+            memory_model = rom_banking; // 16 Mbit ROM / 8 Kbyte RAM max model. (16 Mbit ROM = 2 Mbyte)
         }
     }
 
-    // A write (XXXX XXBBb) to the lower half of switchable ROM selects either the RAM bank or RAM address lines
-    else if ((addr > EXTERNAL_ROM_START) && (addr < 0x5FFF))
+    // A write (XXXX XXBBb) to the lower half of switchable ROM selects either the RAM bank or upper ROM address lines
+    else if ((addr >= EXTERNAL_ROM_START) && (addr <= 0x5FFF))
     {
         if (data & 0x03)
         {
-            if (memory_model == memory_model_4_32)
+            if (memory_model == ram_banking)
             {
                 current_ram_bank = (data & 0x03);
             }
-            else if (memory_model == memory_model_16_8)
+            else if (memory_model == rom_banking)
             {
                 // @TODO: Selct the two most significant ROM address lines if in 16/8 mode
+                current_rom_bank = (current_rom_bank & 0x1F) || ((data & 0x03) << 5);
             }
         }
     }
 
-    // A write (XXXB BBBBb) to the upper half of internal ROM selects the ROM bank to be used
-    else if ((addr > 0x2000) && (addr < ROM_END))
+    // A write (XXXB BBBBb) to the upper half of internal ROM selects the lower 5 bits of the ROM bank to be used
+    else if ((addr >= 0x2000) && (addr <= ROM_END))
     {
+        // Do not allow bank switching to #0, #20, #40, or #60, use next instead
+        if ((data == 0) || (data == 20) || (data == 40) || (data == 60))
+            ++data;
+
         if (data & 0x1F)
         {
             current_rom_bank = (data & 0x1F);
@@ -60,22 +73,64 @@ void GBCPU::MBC1write(word addr, byte data)
     }
 
     // A write (XXXX BBBBb) to the lower half of internal ROM enables/disable switchable RAM read/write
-    else if ((addr > 0x2000) && (addr < ROM_END)) // @TODO: Add condition for 4/32 mode.
+    else if ((addr >= ROM_START) && (addr <= 0x1FFF) && (memory_model == ram_banking))
     {
+        // Only allow access if we are in RAM banking mode (4/32)
         if (data & 0x0A)
         {
+            // Enable RAM (default)
             ram_bank_access_enabled = true;
         }
         else
         {
+            // Disable RAM
             ram_bank_access_enabled = false;
         }
+    }
+
+    // If memory is written to WRAM or ECHO WRAM, write to both. Note: last 512 bytes not echoed.
+    else if (addr >= WRAM_START && addr <= (WRAM_END - 0x200))
+    {
+        MEM[addr] = data;
+        MEM[addr + (WRAM_ECHO_START - WRAM_START)] = data;
+    }
+    
+    else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_END)
+    {
+        MEM[addr] = data;
+        MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;
+    }
+    
+    // Write to other areas of memory
+    else
+    {
+        MEM[addr] = data;
     }
 
 }
 
 // MBC1read: Read data from RAM/ROM banks in a MBC1 memory model
-void GBCPU::MBC1read(word addr)
+byte GBCPU::MBC1read(word addr)
 {
-
+    if ((addr > 0x0000) && (addr <= ROM_END))
+    {
+        // Always read the first 16 KBytes of memory in this region (bank #0)
+        return MEM[addr];
+    }
+    else if ((addr >= EXTERNAL_ROM_START) && (addr <= EXTERNAL_ROM_END))
+    {
+        // Read the address at the current ROM bank number
+        return ext_rom[current_rom_bank * 0x4000 + (addr - EXTERNAL_ROM_START)];
+    }
+    else if ((addr >= EXTERNAL_RAM_START) && (addr <= EXTERNAL_RAM_END) &&
+             (ram_bank_access_enabled == true))
+    {
+        // Read the address at the current RAM bank number
+        return ext_ram[current_ram_bank * 0x2000 + (addr - EXTERNAL_RAM_START)];
+    }
+    else
+    {
+        // Read from other areas of memory
+        return MEM[addr];
+    }
 }

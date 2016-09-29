@@ -1,9 +1,14 @@
+/*
+Name:        GBCPU.cpp
+Author:      Sergio Morales
+Date:        09/27/2016
+Description: This file contains the functions utilized for initializing
+             and executing CPU opcodes.
+*/
+
 #include "GBCPU.h"
 #include "gameboy.h"
-// Game Boy CPU class function definitions
-/*
 
-*/
 GBCPU::GBCPU()
 {
 	// Default constructor

@@ -5,8 +5,8 @@
 
 typedef enum memory_model_types
 {
-    memory_model_16_8,
-    memory_model_4_32
+    rom_banking,
+    ram_banking
 } memory_model_types;
 
 extern memory_model_types memory_model; // The current maximum memory model for MBC

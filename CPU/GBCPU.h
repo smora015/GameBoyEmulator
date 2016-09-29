@@ -43,7 +43,7 @@ public:
 
     /***** Memory Access functions - memory.cpp/mbc.cpp *****/
     void MBC1write(word addr, byte data);
-    void MBC1read(word addr);
+    byte MBC1read(word addr);
     void writeByte(byte data, word addr);
     void writeWord(word data, word addr);
     byte readByte(word addr);
@@ -73,7 +73,6 @@ public:
 
 
     /***** Opcode Functions - opcodes.cpp *****/
-    
     // ADD A, n
     inline void ADD(byte & reg, byte arg);
 

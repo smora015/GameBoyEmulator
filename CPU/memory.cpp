@@ -7,77 +7,165 @@
 
 */
 #include "GBCPU.h"
+#include "GBCartridge.h"
 #include "gameboy.h"
 
 
 // writeByte - Write one byte to memory
 void GBCPU::writeByte(byte data, word addr)
 {
-    // Check what memory region to write in
-    MEM[addr] = data;
+    if (rom_mbc_type == ROM_MBC1)
+    {
+        MBC1write(addr, data);
+    }
+    else if (rom_mbc_type == ROM_ONLY)
+    {
+        MEM[addr] = data;
 
-    // If memory is written to WRAM or ECHO WRAM, write to both. Note: last 512 bytes not echoed.
-    if (addr >= WRAM_START && addr <= (WRAM_END - 0x200))
-    {
-        MEM[addr + (WRAM_ECHO_START - WRAM_START)] = data;
+        // If memory is written to WRAM or ECHO WRAM, write to both. Note: last 512 bytes not echoed.
+        if (addr >= WRAM_START && addr <= (WRAM_END - 0x200))
+        {
+            MEM[addr + (WRAM_ECHO_START - WRAM_START)] = data;
+        }
+        else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_END)
+        {
+            MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;
+        }
     }
-    else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_END)
+    else
     {
-        MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;
+        cout << "Unsupported MBC type!!!" << endl;
     }
+
 }
 
 void GBCPU::writeWord(word data, word addr)
 {
-    // Write LSB first
-    MEM[addr] = (byte)(data & 0xFF);
-    MEM[addr + 1] = (byte)((data >> 8) & 0xFF);
+    if (rom_mbc_type == ROM_MBC1)
+    {
+        MBC1write(addr, (byte)(data & 0xFF));
+        MBC1write(addr + 1, (byte)((data >> 8) & 0xFF));
+    }
+    else if (rom_mbc_type == ROM_ONLY)
+    {
+        // Write LSB first
+        MEM[addr] = (byte)(data & 0xFF);
+        MEM[addr + 1] = (byte)((data >> 8) & 0xFF);
 
 
-    // If memory is written to WRAM or ECHO WRAM, write to both
-    if (addr >= WRAM_START && addr <= WRAM_END)
-    {
-        MEM[addr + (WRAM_ECHO_START - WRAM_START)] = (byte)(data & 0xFF);
-        MEM[addr + 1 + (WRAM_ECHO_START - WRAM_START)] = (byte)((data >> 8) & 0xFF);
+        // If memory is written to WRAM or ECHO WRAM, write to both
+        if (addr >= WRAM_START && addr <= WRAM_END)
+        {
+            MEM[addr + (WRAM_ECHO_START - WRAM_START)] = (byte)(data & 0xFF);
+            MEM[addr + 1 + (WRAM_ECHO_START - WRAM_START)] = (byte)((data >> 8) & 0xFF);
+        }
+        else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_START)
+        {
+            MEM[addr + (WRAM_ECHO_START - WRAM_START)] = (byte)(data & 0xFF);
+            MEM[addr + 1 + (WRAM_ECHO_START - WRAM_START)] = (byte)((data >> 8) & 0xFF);
+        }
     }
-    else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_START)
+    else
     {
-        MEM[addr + (WRAM_ECHO_START - WRAM_START)] = (byte)(data & 0xFF);
-        MEM[addr + 1 + (WRAM_ECHO_START - WRAM_START)] = (byte)((data >> 8) & 0xFF);
+        cout << "Unsupported MBC type!!!" << endl;
     }
+
+
 }
 // readByte - Read byte from memory
 byte GBCPU::readByte(word addr)
 {
-    return MEM[addr];
+    if (rom_mbc_type == ROM_MBC1)
+    {
+        return MBC1read(addr);
+    }
+    else if (rom_mbc_type == ROM_ONLY)
+    {
+        return MEM[addr];
+    }
+    else
+    {
+        cout << "Unsupported MBC type!!!" << endl;
+        return 0x00;
+    }
+
 }
 
 // readImmByte - Read immediate byte from memory
 byte GBCPU::readImmByte()
 {
-    return MEM[PC + 1];
+    if (rom_mbc_type == ROM_MBC1)
+    {
+        return MBC1read(PC + 1);
+    }
+    else if (rom_mbc_type == ROM_ONLY)
+    {
+        return MEM[PC + 1];
+    }
+    else
+    {
+        cout << "Unsupported MBC type!!!" << endl;
+        return 0x00;
+    }
 }
 
 // ReadWord - Read word from memory
 word GBCPU::readWord(word addr)
 {
-    // Get LSB byte first
-    byte LSB = MEM[addr];
-    byte MSB = MEM[addr + 1];
+    if (rom_mbc_type == ROM_MBC1)
+    {
+        // Get LSB byte first
+        byte LSB = MBC1read(addr);
+        byte MSB = MBC1read(addr + 1);
 
-    word temp = CASTWD(MSB, LSB);
-    return temp;
+        word temp = CASTWD(MSB, LSB);
+        return temp;
+    }
+    else if (rom_mbc_type == ROM_ONLY)
+    {
+        // Get LSB byte first
+        byte LSB = MEM[addr];
+        byte MSB = MEM[addr + 1];
+
+        word temp = CASTWD(MSB, LSB);
+        return temp;
+    }
+    else
+    {
+        cout << "Unsupported MBC type!!!" << endl;
+        return 0x0000;
+    }
+
 }
 
 // ReadWord - Read word from memory
 word GBCPU::readImmWord()
 {
-    // Get LSB byte first
-    byte LSB = MEM[PC + 1];
-    byte MSB = MEM[PC + 2];
+    if (rom_mbc_type == ROM_MBC1)
+    {
+        // Get LSB byte first
+        byte LSB = MBC1read(PC + 1);
+        byte MSB = MBC1read(PC + 2);
 
-    word temp = CASTWD(MSB, LSB);
-    return temp;
+        word temp = CASTWD(MSB, LSB);
+        return temp;
+    }
+    else if (rom_mbc_type == ROM_ONLY)
+    {
+        // Get LSB byte first
+        byte LSB = MEM[PC + 1];
+        byte MSB = MEM[PC + 2];
+
+        word temp = CASTWD(MSB, LSB);
+        return temp;
+    }
+    else
+    {
+        cout << "Unsupported MBC type!!!" << endl;
+        return 0x0000;
+    }
+
+
 }
 
 // Cannot inline these because they're used in other .cpp files! Note this may have to be done on
