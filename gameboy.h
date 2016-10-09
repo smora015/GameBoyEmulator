@@ -20,9 +20,6 @@ typedef unsigned short word;
 // Cast LSB and MSB as a WORD (16 bits)
 #define CASTWD(x, y) (((((word)x) << 8) & 0xFF00) | ((word)y) & 0x00FF)
 
-// LOAD macro
-#define LD(nn, n) nn = n
-
 // Decrement macro (note: this is not the actual DEC and INC opcode. See DECR, INCR)
 #define DEC(x, y) word temp = (CASTWD(x,y) - 1) & 0xFFFF; \
                       x = (byte)((temp >> 8) & 0xFF); \
@@ -54,6 +51,12 @@ Courtesy: https://realboyemulator.wordpress.com/
 
 0xFF90 - 0xFFFE High RAM Area
 */
+
+#define GAMEBOY_CLOCK_CYCLES 4194304 // The number of CPU clock cycles executed per second
+#define GAMEBOY_FRAME_RATE   60      // The number of LCD frames rendered per second
+
+#define GAMEBOY_CYCLES_SEC   \
+        GAMEBOY_CLOCK_CYCLES / GAMEBOY_FRAME_RATE // The number of cycles per second
 
 #define INTERRUPT_ENABLE	 0xFFFF  // $FFFF - IE - Interrupt Enable (1 = Enabled) address
 

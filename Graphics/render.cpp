@@ -1,60 +1,136 @@
-#include "render.h"
-#include "glew.h"
-#include "freeglut.h"
+﻿#include "render.h"
+#include "GBCartridge.h"
+#include "GBCPU.h"
+
 #include <stdio.h>
-//#include <GL/glut.h>
+
+// Define variables
+pixel pixel_buffer[160][144];
+
+
+// Renders the Nintendo scrolling graphic
+void getIntroScreen(GBCPU cpu)
+{
+    // The Nintendo logo in $104 - $133 is not encoded, each bit 
+    // refers to a colored pixel or not.
+
+    // Initialize pixel buffer
+    for (int x = 0; x < 160; ++x)
+    {
+        for (int y = 0; y < 144; ++y)
+        {
+            pixel_buffer[x][y].r = 55;
+            pixel_buffer[x][y].g = 45;
+            pixel_buffer[x][y].b = 25;
+        }
+    }
+
+    // Populate a map of the Nintendo logo for rendering
+    byte logo_map[12][4];
+    unsigned short index = 0x104; // Beginning of logo in memory
+
+    // Y axis
+    for (int y = 0; y < 2; ++y)
+    {
+        // X axis
+        for (int x = 0; x < 12; ++x)
+        {
+            logo_map[x][y*2] = cpu.MEM[index++];
+            logo_map[x][y*2 + 1] = cpu.MEM[index++];
+        }
+    }
+
+    unsigned short x_coord = 55;
+    unsigned short y_coord = 65;
+
+    // Now render the data based on the map
+    for (int y = 0; y < 4; ++y)
+    {
+        x_coord = 55;
+        for (int x = 0; x < 12; ++x)
+        {
+            // Get the byte at current location
+            byte data = logo_map[x][y];
+            pixel temp;
+
+            // Render upper nibble
+            for (int i = 0; i < 4; ++i)
+            {
+                if (data & (0x10 << (3 - i)))
+                {
+                    //cout << "1 ";
+                    temp.r = 55;
+                    temp.g = 55;
+                    temp.b = 255;
+                }
+                else
+                {
+                    //cout << "  ";
+                    temp.r = 55;
+                    temp.g = 45;
+                    temp.b = 25;
+                }
+
+                pixel_buffer[x_coord++][y_coord] = temp;
+            }
+            //cout << " ";
+        }
+        x_coord = 55;
+        //cout << endl;
+
+        for (int x = 0; x < 12; ++x)
+        {
+            // Get the byte at current location
+            byte data = logo_map[x][y];
+            pixel temp;
+
+            // Render lower nibble
+            for (int i = 0; i < 4; ++i)
+            {
+                if (data & (0x01 << (3 - i)))
+                {
+                    //cout << "1 ";
+                    temp.r = 55;
+                    temp.g = 55;
+                    temp.b = 255;
+                }
+                else
+                {
+                    //cout << "  ";
+                    temp.r = 55;
+                    temp.g = 45;
+                    temp.b = 25;
+                }
+
+                pixel_buffer[x_coord++][y_coord+1] = temp;
+            }
+
+            //cout << " ";
+        }
+
+        //cout << endl;
+        y_coord += 2;
+
+    }
+
+    //cout << endl;
+}
+
+// Renders the GameBoy video buffer (256x256)
+void renderPixelBuffer(SDL_Renderer * renderer)
+{
+    for (int y = 0; y < 144; ++y)
+    {
+        for (int x = 0; x < 160; ++x)
+        {
+            renderPixel(x, y, renderer, pixel_buffer[x][y]);
+        }
+    }
+}
 
 // Renders a quad at cell (x, y) with dimensions CELL_LENGTH
-void renderPixel(int x, int y)
+void renderPixel(int x, int y, SDL_Renderer * renderer, pixel pixel)
 {
-	glBegin(GL_POINTS);
-
-	// Render a point based off a vertex
-	glVertex2f(GLfloat(x), GLfloat(y));
-
-	glEnd();
-}
-
-// Output functon to OpenGL Buffer
-void GL_render()
-{
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	glColor3f(GLfloat(0.5), GLfloat(0.7), GLfloat(1.0));
-	renderPixel(200, 100);
-	renderPixel(201, 100);
-	renderPixel(202, 100);
-	renderPixel(203, 100);
-	renderPixel(204, 100);
-	renderPixel(206, 100);
-	renderPixel(207, 100);
-	renderPixel(208, 100);
-	renderPixel(208, 100);
-	renderPixel(209, 100);
-	renderPixel(210, 100);
-	renderPixel(211, 100);
-	renderPixel(212, 100);
-
-	glutSwapBuffers();
-}
-
-
-//Initializes OpenGL attributes
-void GLInit(int* argc, char** argv)
-{
-	glutInit(argc, argv);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
-	glutInitWindowSize(800, 800);
-
-	// Create window
-	glutCreateWindow("GameBoy Emulator (BETA)");
-
-	// NEW: Register rendering function
-	glutDisplayFunc(GL_render);
-
-	// The default view coordinates is (-1.0, -1.0) bottom left & (1.0, 1.0) top right.
-	// For the purposes of this lab, this is set to the number of pixels
-	// in each dimension.
-	glMatrixMode(GL_PROJECTION_MATRIX);
-	glOrtho(0.0, 800, 0.0, 800, -1.0, 1.0);
+    SDL_SetRenderDrawColor(renderer, pixel.r, pixel.g, pixel.b, SDL_ALPHA_OPAQUE);
+    SDL_RenderDrawPoint(renderer, x, y);
 }

@@ -49,11 +49,12 @@ void GBCPU::MBC1write(word addr, byte data)
         {
             if (memory_model == ram_banking)
             {
+                // Select the current RAM bank #
                 current_ram_bank = (data & 0x03);
             }
             else if (memory_model == rom_banking)
             {
-                // @TODO: Selct the two most significant ROM address lines if in 16/8 mode
+                // Select the two most significant bits for the ROM bank #
                 current_rom_bank = (current_rom_bank & 0x1F) || ((data & 0x03) << 5);
             }
         }
