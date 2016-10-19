@@ -7,37 +7,34 @@ The main guts of the GameBoy. These files contain the logic that parse and execu
 ### Features
 - Supports all opcodes
 - Supports all CB-prefix Opcodes 
-- Compatable with MBC1 cartridges
+- Supports all interrupt routines (not fully tested)
+- Supports Timer and Divider counting (not fully tested)
+- Compatibility with MBC1 cartridges
 
 #### To Do
-##### CPU Execution
-- Implement check for interrupts upon execution
-- Implement check for DI_Executed (disabled interrupt) before execution instructions
-
 ##### CPU Memory Access (Memory Bank Controller logic)
 - Finish up remaining MBC cartridge compatability
  
 ##### CPU Opcodes
 - Clean up opcode helper functions
 - Add comments for all opcodes to describe functionality
-- Revise opcodes $18, $20, $28, $30, $38, $E8, and $F8 to utilize signed 8-bit arithmetic instead of unsigned.
 - Finish up opcodes $F8, $08, and $10 to update the flags correctly
 
 ## PPU
-The picture processing unit of the GameBoy. These files contain the logic that decodes the PRG and CHR ROM data to enable the rendering the sprite and tile data, with direction from the CPU.
+The picture processing unit of the GameBoy. These files contain the logic that decodes the ROM data to enable the rendering the sprite and tile data, with direction from the CPU.
 
 ### Features
 - Currently being implemented
 
 ## ROM Loading
-These files contain the logic that parses through the cartridge (ROM) information and partitions the data according to the format.
+These files contain the logic that parses through the cartridge (ROM) information and partitions the data according to the format. Files are read either from commandline input- if none specified, it will default to a ROM that is hardcoded.
 
 ### Features
 - Supports .gb ROM file format
 - Allocates external ROM and RAM banks depending on MBC type definitions in the header
 
 ## Graphics
-- Simple Direct-media Layer (SDL) is utilized for video rendering, input, and sound (TBD.)
+These files contain the functions used for rendering pixels onto the screen. Simple Direct-media Layer (SDL) is utilized for video rendering, input, and sound (TBD.) A 256x256 pixel buffer is used to display all pixels onto the window.
 
 ## References
 - The GameBoy Pan docs
