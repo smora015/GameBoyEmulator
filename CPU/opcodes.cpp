@@ -64,14 +64,14 @@ inline void GBCPU::ADD(word arg)
 inline void GBCPU::ADDSP()
 {
     // TODO: Confirm H and C flag get set based off 11th and 15th bit
-    byte arg = readImmByte();
+    signed_byte arg = signed_byte(readImmByte());
 
     // Reset Z, N flag
     SUBTRACT_FLAG = false;
     ZERO_FLAG = false;
 
     // Detect half carry
-    if (((SP & 0x0FF) + (arg & 0x0FF)) & 0x1000)
+    if (((SP & 0x0FF) + arg) & 0x1000)
         HALF_CARRY_FLAG = true;
     else
         HALF_CARRY_FLAG = false;
@@ -545,7 +545,7 @@ inline void GBCPU::JP()
 inline void GBCPU::JR()
 {
     // Get the immediate byte
-    byte n = readImmByte();
+    signed_byte n = readImmByte();
 
     // Add the immediate byte (n) to the current PC (after this instruction so we add 2)
     PC += n + 2;
@@ -626,7 +626,7 @@ void GBCPU::OP1D() { DECR(E); ++PC; cycles = 4; }                               
 void GBCPU::OP1E() { E = readImmByte(); PC += 2; cycles = 8; }                  // LD E, #
 void GBCPU::OP1F() { RRA(); ++PC; cycles = 4; }                                 // RRA
 
-void GBCPU::OP20() { if (ZERO_FLAG == false) JR(); else PC += 2; cycles = 8; }  // JR nz
+void GBCPU::OP20() { if (ZERO_FLAG == false) JR(); else PC += 2; cycles = 8; }  // JR NZ
 void GBCPU::OP21() { SetHL(readImmWord()); PC += 3; cycles = 12; }              // LD HL, ##
 void GBCPU::OP22() { writeByte(A, GetHL()); INC(H, L); ++PC; cycles = 8; }      // LD (HL++), A
 void GBCPU::OP23() { INC(H, L); ++PC; cycles = 8; }                             // INC HL
@@ -825,7 +825,7 @@ void GBCPU::OPD5() { PUSH(D, E); ++PC; cycles = 16; }
 void GBCPU::OPD6() { SUB(A, readImmByte() ); PC += 2; cycles = 8; }
 void GBCPU::OPD7() { RST(0x10); cycles = 32; }
 void GBCPU::OPD8() { if (CARRY_FLAG == true) RET(); else ++PC; cycles = 8; }
-void GBCPU::OPD9() { RET(); MEM[INTERRUPT_ENABLE] = 0x01; cycles = 8; }
+void GBCPU::OPD9() { RET(); IME = true; cycles = 8; }
 void GBCPU::OPDA() { if (CARRY_FLAG == true) JP(); else PC += 3; cycles = 12; }
 void GBCPU::OPDB() { cout << "ILLEGAL OPCODE CALLED!" << endl; /* DO NOTHING - BLANK OPCODE */ }
 void GBCPU::OPDC() { if (CARRY_FLAG == true) CALL(); else PC += 3; cycles = 12; }
@@ -853,15 +853,15 @@ void GBCPU::OPEF() { RST(0x28); cycles = 32; }
 void GBCPU::OPF0() { printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + readImmByte()], 0xFF00 + readImmByte()); A = readByte(0xFF00 + readImmByte()); PC += 2; cycles = 12; } // LD A, ($FF00 + #)
 void GBCPU::OPF1() { byte temp = 0x00; POP(A, temp); SetF(temp); ++PC; cycles = 12; }
 void GBCPU::OPF2() { printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + C], 0xF00 + C); A = readByte(0xFF00 + C); ++PC; cycles = 8; } // LD A, ($FF00 + C)
-void GBCPU::OPF3() { DI_Executed = true; ++PC; cycles = 4; } // DI
+void GBCPU::OPF3() { IME = true; ++PC; cycles = 4; } // DI
 void GBCPU::OPF4() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPF5() { PUSH(A, GetF()); ++PC; cycles = 16; }
 void GBCPU::OPF6() { OR(A, readImmByte() ); PC += 2;  cycles = 8; }
 void GBCPU::OPF7() { RST(0x30); cycles = 32; }
-void GBCPU::OPF8() { SetHL( SP + readImmByte() ); PC += 2; cycles = 12; SUBTRACT_FLAG = false; ZERO_FLAG = false; } 
-void GBCPU::OPF9() { SP = GetHL(); ++PC; cycles = 8; }                                                                  // LD SP, HL
+void GBCPU::OPF8() { SetHL( word(SP + (signed_byte)readImmByte()) ); PC += 2; cycles = 12; SUBTRACT_FLAG = false; ZERO_FLAG = false; }     // LD HL SP, n
+void GBCPU::OPF9() { SP = GetHL(); ++PC; cycles = 8; }                                                                                     // LD SP, HL
 void GBCPU::OPFA() { A = readByte(readImmWord()); PC += 3; cycles = 16; } // LD A, (##)
-void GBCPU::OPFB() { DI_Executed = false; ++PC; cycles = 4; } // EI
+void GBCPU::OPFB() { IME = false; ++PC; cycles = 4; } // EI
 void GBCPU::OPFC() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPFD() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPFE() { CP(A, readImmByte() ); PC += 2; cycles = 8; }

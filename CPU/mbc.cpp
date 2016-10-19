@@ -101,7 +101,13 @@ void GBCPU::MBC1write(word addr, byte data)
         MEM[addr] = data;
         MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;
     }
-    
+
+    else if (addr == DIV)
+    {
+        // Reset the DIV register if we're writing to it
+        MEM[DIV] = 0;
+    }
+
     // Write to other areas of memory
     else
     {

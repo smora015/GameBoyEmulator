@@ -31,6 +31,11 @@ void GBCPU::writeByte(byte data, word addr)
         {
             MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;
         }
+        else if (addr == DIV)
+        {
+            // Reset the DIV register if we're writing to it
+            MEM[DIV] = 0;
+        }
     }
     else
     {

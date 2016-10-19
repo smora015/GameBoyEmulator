@@ -1,11 +1,8 @@
 ﻿#include "render.h"
-#include "GBCartridge.h"
-#include "GBCPU.h"
-
 #include <stdio.h>
 
 // Define variables
-pixel pixel_buffer[160][144];
+pixel pixel_buffer[256][256]; // 256 x 256 pixels exist, but the true resolution is 160 x 144
 
 
 // Renders the Nintendo scrolling graphic
@@ -15,9 +12,9 @@ void getIntroScreen(GBCPU cpu)
     // refers to a colored pixel or not.
 
     // Initialize pixel buffer
-    for (int x = 0; x < 160; ++x)
+    for (int x = 0; x < 256; ++x)
     {
-        for (int y = 0; y < 144; ++y)
+        for (int y = 0; y < 256; ++y)
         {
             pixel_buffer[x][y].r = 55;
             pixel_buffer[x][y].g = 45;
@@ -117,11 +114,14 @@ void getIntroScreen(GBCPU cpu)
 }
 
 // Renders the GameBoy video buffer (256x256)
-void renderPixelBuffer(SDL_Renderer * renderer)
+void renderPixelBuffer(SDL_Renderer * renderer, GBCPU & CPU)
 {
-    for (int y = 0; y < 144; ++y)
+    int scrolly = CPU.readByte(PPU_SCROLLY);
+    int scrollx = CPU.readByte(PPU_SCROLLX);
+
+    for (int y = scrolly; y < (144 + scrolly); ++y)
     {
-        for (int x = 0; x < 160; ++x)
+        for (int x = scrollx; x < (160 + scrollx); ++x)
         {
             renderPixel(x, y, renderer, pixel_buffer[x][y]);
         }

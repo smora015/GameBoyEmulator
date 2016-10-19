@@ -15,15 +15,15 @@ class GBCPU
 {
 public:
 	byte MEM[MAX_GB_MEMORY]; 	// CPU Memory (PRG) Currently 64K max size
-	word ADDR;					// CPU Address Bus  - UNUSED
-	byte DATA;					// CPU Data Bus     - UNUSED
-	word SP;					// Stack Pointer
+	//word ADDR;					// CPU Address Bus  - UNUSED
+	//byte DATA;					// CPU Data Bus     - UNUSED
+
+    /***** CPU Registers *****/
+    word SP;					// Stack Pointer
 	word PC;					// Program Counter
 	byte A;						// Accumulator Register
 
-    bool DI_Executed;           // Flag that tells CPU to disable interrupt on this instruction. TODO: Have CPU check this before executing instruction
-
-    bool CARRY_FLAG,           // Status Register (F)
+    bool CARRY_FLAG,            // Status Register (F)
          HALF_CARRY_FLAG,
          SUBTRACT_FLAG,
          ZERO_FLAG;
@@ -32,14 +32,19 @@ public:
 		 D, E,					// These may be paired to form 16-bit registers
 		 H, L;					// (same applies for A & F)
 
-	word cycles;				// The number of cycles currently counted
 
-	void (GBCPU::*opcodes[256])(); 	 // Array of pointers to Opcode member functions
-	void (GBCPU::*CBopcodes[256])(); // Array of pointers to CB-prefix member Opcode functions
+    /***** Internal Variables *****/
+    bool IME;                   // Interrupt Master Enable flag
+    byte cycles;				// The number of cycles currently counted
+    unsigned short DIV_counter; // Internal DIV cycle counter to increment the DIV counter in memory
+    unsigned short TMA_counter; // Internal TMA cycle counter to increment the time counter in memory
 
 	// Function Declarations
 	GBCPU();					// Constructor
 	~GBCPU();					// Deconstructor
+
+    void (GBCPU::*opcodes[256])(); 	 // Array of pointers to Opcode member functions
+    void (GBCPU::*CBopcodes[256])(); // Array of pointers to CB-prefix member Opcode functions
 
     /***** Memory Access functions - memory.cpp/mbc.cpp *****/
     void MBC1write(word addr, byte data);
@@ -140,10 +145,9 @@ public:
 
     // RET cc
     inline void RET();
-	/*
-	CPU Opcode Execution Instruction Macros
-	*/
 
+
+    /*****	CPU Opcode Execution Instruction Macros *****/
     void OP00();
     void OP01(); 
     void OP02(); 

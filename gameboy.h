@@ -12,6 +12,7 @@
 typedef unsigned char byte;
 typedef signed char signed_byte;
 typedef unsigned short word;
+typedef signed short signed_word;
 
 /*
 	CPU Definitions and Macros
@@ -64,7 +65,7 @@ Courtesy: https://realboyemulator.wordpress.com/
 #define HRAM_START           0xFF80  // High RAM, otherwise known as Zero Page beginning address
 
 #define INTERRUPT_FLAG		 0xFF0F  // $FF0F - IF - Interrupt Flag - (1 = Requested) address
-                                     // Bits 3 - 0: Joypad - Serial - Timer - LCD St - V-Blank (lower bit = high pri.)
+                                     // Bits 4 - 0: Joypad - Serial - Timer - LCD St - V-Blank (lower bit = high pri.)
 
 #define SPRITE_TABLE_END     0xFEFF  // Sprite Attribute table ending address
 #define SPRITE_TABLE_START   0xFE00  // Sprite Attribute table begninning address
@@ -102,6 +103,22 @@ Courtesy: https://realboyemulator.wordpress.com/
 #define MIN_SPRITES_ROW      8
 #define MIN_SPRITES_COL      8
 
+// TIMERS and DIVIDER registers
+#define TIMA        0xFF05       // Timer Counter (TIMA)
+#define TMOD        0xFF06       // Timer Modulo (TMA)
+#define TCON        0xFF07       // Timer Control (TAC)
+
+#define DIV         0xFF04       // Divider Register (R/W)
+#define DIV_RATE    16384        // Divider Register rate in Hz (1/16384 cycles/sec)
+/*
+    This register is incremented 16384 times a second. Writing 
+*/
+
+// I/O Registers
+
+#define JOYPAD_P1   0xFF00
+#define SERIAL_XFER 0xFF01
+#define SIO_CONTROL 0xFF02
 
 
 #endif /* GAMEBOY_H_ */

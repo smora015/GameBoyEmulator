@@ -1,11 +1,22 @@
 #include "GBPPU.h"
 
 
-GBPPU::GBPPU()
+void TestVideoRAM()
 {
+
+    return;
 }
 
-
-GBPPU::~GBPPU()
+void RenderTile(word addr)
 {
+
+    return;
+}
+
+void ExecutePPU(byte cycles)
+{
+    // Set V-Blank interrupt if we're at LY = 144
+
+
+    return;
 }
