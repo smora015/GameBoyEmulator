@@ -108,6 +108,11 @@ void GBCPU::MBC1write(word addr, byte data)
         MEM[DIV] = 0;
     }
 
+    else if (addr == PPU_DMA)
+    {
+        PerformDMATransfer(data);
+    }
+
     // Write to other areas of memory
     else
     {

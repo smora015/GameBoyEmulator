@@ -1,5 +1,5 @@
-#ifndef GAMEBOY_H_
-#define GAMEBOY_H_
+#ifndef GAMEBOY_H
+#define GAMEBOY_H
 
 
 // TODO:
@@ -56,8 +56,8 @@ Courtesy: https://realboyemulator.wordpress.com/
 #define GAMEBOY_CLOCK_CYCLES 4194304 // The number of CPU clock cycles executed per second
 #define GAMEBOY_FRAME_RATE   60      // The number of LCD frames rendered per second
 
-#define GAMEBOY_CYCLES_SEC   \
-        GAMEBOY_CLOCK_CYCLES / GAMEBOY_FRAME_RATE // The number of cycles per second
+#define GAMEBOY_CYCLES_FRAME   \
+        GAMEBOY_CLOCK_CYCLES / GAMEBOY_FRAME_RATE // The number of cycles per frame
 
 #define INTERRUPT_ENABLE	 0xFFFF  // $FFFF - IE - Interrupt Enable (1 = Enabled) address
 
@@ -67,7 +67,9 @@ Courtesy: https://realboyemulator.wordpress.com/
 #define INTERRUPT_FLAG		 0xFF0F  // $FF0F - IF - Interrupt Flag - (1 = Requested) address
                                      // Bits 4 - 0: Joypad - Serial - Timer - LCD St - V-Blank (lower bit = high pri.)
 
-#define SPRITE_TABLE_END     0xFEFF  // Sprite Attribute table ending address
+// 0xFEA0 - 0xFEFF is Unusable!
+
+#define SPRITE_TABLE_END     0xFE9F  // Sprite Attribute table ending address
 #define SPRITE_TABLE_START   0xFE00  // Sprite Attribute table begninning address
 
 #define WRAM_ECHO_END        0xFDFF  // Working RAM bank 0/1 echo data ending address
@@ -92,16 +94,6 @@ Courtesy: https://realboyemulator.wordpress.com/
 
 #define MAX_GB_MEMORY        0x10000 // 64k of byte-addresable memory
 
-/*
-	Picture Processing Unit Definitions
-*/
-#define MAX_SPRITES          40
-#define MAX_SPRITES_PER_LINE 10
-
-#define MAX_SPRITES_ROW      8
-#define MAX_SPRITES_COL      16
-#define MIN_SPRITES_ROW      8
-#define MIN_SPRITES_COL      8
 
 // TIMERS and DIVIDER registers
 #define TIMA        0xFF05       // Timer Counter (TIMA)
@@ -110,9 +102,6 @@ Courtesy: https://realboyemulator.wordpress.com/
 
 #define DIV         0xFF04       // Divider Register (R/W)
 #define DIV_RATE    16384        // Divider Register rate in Hz (1/16384 cycles/sec)
-/*
-    This register is incremented 16384 times a second. Writing 
-*/
 
 // I/O Registers
 
@@ -120,5 +109,7 @@ Courtesy: https://realboyemulator.wordpress.com/
 #define SERIAL_XFER 0xFF01
 #define SIO_CONTROL 0xFF02
 
+// LCD OAM DMA Transfers
+#define PPU_DMA             0xFF46 // DMA Transfer and Start Address
 
 #endif /* GAMEBOY_H_ */

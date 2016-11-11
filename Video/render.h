@@ -1,5 +1,5 @@
-#ifndef RENDER_H_
-#define RENDER_H_
+#ifndef RENDER_H
+#define RENDER_H
 
 
 #include "gameboy.h"
@@ -13,14 +13,13 @@
 #include <SDL.h>
 
 // Struct that defines the pixels to be rendered on screen
-typedef struct pixel 
-{
+typedef struct pixel {
     byte r;
     byte g;
     byte b;
 } pixel;
 
-extern pixel pixel_buffer[256][256];
+extern pixel pixel_buffer[160][144];
 
 // Renders the Nintendo scrolling graphic
 void getIntroScreen(GBCPU cpu);

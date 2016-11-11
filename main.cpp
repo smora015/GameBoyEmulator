@@ -55,24 +55,25 @@ int main(int argc, char **argv)
     while (1) 
     {
         // Execute the CPU and PPU by the number of clock cycles executed during this frame (assuming 60 FPS capped by SDL)
-        int cycles_in_frame = 0; 
-        while (cycles_in_frame < GAMEBOY_CYCLES_SEC)
+        int cycles_in_frame = GAMEBOY_CYCLES_FRAME; // 0;
+        while (cycles_in_frame < GAMEBOY_CYCLES_FRAME)
         {
-            // Otherwise, execute the current CPU instruction and get the # of cycles it took
+            // Otherwise, execute the current CPU instruction
             while ((exec_count--) > 0)
             {
                 CPU.execute();
             }
 
-            // Execute the PPU based on the # of cycles the current instruction took
-            byte cycles = CPU.cycles;
-            ExecutePPU(cycles);
 
             // Update timers based on # of cycles the current instruction took
+            byte cycles = CPU.cycles; 
             UpdateTimer(cycles, CPU);
 
             // Update DIV registers
             UpdateDIV(cycles, CPU);
+
+            // Execute the PPU based on the # of cycles the current instruction took
+            ExecutePPU(cycles, CPU);
 
             // Check for any interrupts being requested if enabled
             CheckInterrupts(CPU);
@@ -84,6 +85,7 @@ int main(int argc, char **argv)
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
             break;
 
+        TestVideoRAM(CPU);
 
         // Render the screen
         renderPixelBuffer(renderer, CPU);

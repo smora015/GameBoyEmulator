@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 // Define variables
-pixel pixel_buffer[256][256]; // 256 x 256 pixels exist, but the true resolution is 160 x 144
+pixel pixel_buffer[160][144]; // 256 x 256 pixels exist, but the true resolution is 160 x 144
 
 
 // Renders the Nintendo scrolling graphic
@@ -119,9 +119,9 @@ void renderPixelBuffer(SDL_Renderer * renderer, GBCPU & CPU)
     int scrolly = CPU.readByte(PPU_SCROLLY);
     int scrollx = CPU.readByte(PPU_SCROLLX);
 
-    for (int y = scrolly; y < (144 + scrolly); ++y)
+    for (int y = 0 /*scrolly*/; y < (144/* + scro0lly*/); ++y)
     {
-        for (int x = scrollx; x < (160 + scrollx); ++x)
+        for (int x = 0 /*scrollx*/; x < (160/* + scrollx*/); ++x)
         {
             renderPixel(x, y, renderer, pixel_buffer[x][y]);
         }

@@ -1,5 +1,5 @@
-#ifndef _GBCARTRIDGE_H_
-#define _GBCARTRIDGE_H_
+#ifndef _GBCARTRIDGE_H
+#define _GBCARTRIDGE_H
 
 #include "GBCPU.h"
 #include <string>

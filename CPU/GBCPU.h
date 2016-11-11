@@ -1,5 +1,5 @@
-#ifndef _GBCPU_H_
-#define _GBCPU_H_
+#ifndef GBCPU_H
+#define GBCPU_H
 
 #include "gameboy.h"
 #include <iostream>
@@ -55,6 +55,8 @@ public:
     byte readImmByte();
     word readWord(word addr);
     word readImmWord();
+
+    void PerformDMATransfer(byte source);
 
     byte GetF(); // Get Status Register as a byte
     void SetF(byte F); // Set Status register from a byte

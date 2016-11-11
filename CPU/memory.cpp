@@ -36,6 +36,10 @@ void GBCPU::writeByte(byte data, word addr)
             // Reset the DIV register if we're writing to it
             MEM[DIV] = 0;
         }
+        else if (addr == PPU_DMA)
+        {
+            PerformDMATransfer(data);
+        }
     }
     else
     {
@@ -172,6 +176,16 @@ word GBCPU::readImmWord()
 
 
 }
+
+void GBCPU::PerformDMATransfer(byte source)
+{
+    // The real source address is multiplied by 0x100 which is 256, which essentially left shift by 8. 
+    for (word addr = 0x00; addr <= 0x9F; ++addr)
+    {
+        writeByte(readByte((((word)source << 8) | (addr))), SPRITE_TABLE_START + addr);
+    }
+}
+
 
 // Cannot inline these because they're used in other .cpp files! Note this may have to be done on
 // on the rest of these memory access functions.

@@ -588,8 +588,6 @@ inline void GBCPU::RET()
 CPU Opcode Execution Instruction Macros
 */
 
-// TODO: Remove LD macro and replace by MEMREAD and MEMWRITES
-// TODO: Finish opcode $F8 with status flag setting
 // TODO: CHECK TO SEE IF ALL WORD LOADS GET THE LSB FIRST
 // TODO: Add comments for each opcode about what the instruction does
 void GBCPU::OP00() { cout << "NOP" << endl; ++PC; cycles = 4; }                 // NOP
@@ -858,7 +856,10 @@ void GBCPU::OPF4() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPF5() { PUSH(A, GetF()); ++PC; cycles = 16; }
 void GBCPU::OPF6() { OR(A, readImmByte() ); PC += 2;  cycles = 8; }
 void GBCPU::OPF7() { RST(0x30); cycles = 32; }
-void GBCPU::OPF8() { SetHL( word(SP + (signed_byte)readImmByte()) ); PC += 2; cycles = 12; SUBTRACT_FLAG = false; ZERO_FLAG = false; }     // LD HL SP, n
+void GBCPU::OPF8() { SetHL( word(SP + (signed_byte)readImmByte()) ); PC += 2; cycles = 12; SUBTRACT_FLAG = false; ZERO_FLAG = false; 
+                     // Detect half carry and carry
+                     ((SP & 0x0F) + ((signed_byte)readImmByte() & 0x0F)) ? HALF_CARRY_FLAG = true : HALF_CARRY_FLAG = false;
+                     ((SP & 0x0F) + ((signed_byte)readImmByte() & 0x0F)) ? CARRY_FLAG = true : CARRY_FLAG = false; }                       // LD HL SP, n
 void GBCPU::OPF9() { SP = GetHL(); ++PC; cycles = 8; }                                                                                     // LD SP, HL
 void GBCPU::OPFA() { A = readByte(readImmWord()); PC += 3; cycles = 16; } // LD A, (##)
 void GBCPU::OPFB() { IME = false; ++PC; cycles = 4; } // EI
