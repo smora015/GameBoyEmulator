@@ -36,8 +36,8 @@ typedef signed short signed_word;
 #define POP(x, y)    ++SP; x = MEM[SP]; ++SP; y = MEM[SP];         // POP loads MSB first, then LSB
 
 // Set and clear bits (used mainly for setting status register)
-#define SETBIT(val, bit) val |= (0x01 << bit)
-#define CLRBIT(val, bit) val &= ~(0x01 << bit)
+#define SETBIT(val, bit) (val |= (0x01 << bit))
+#define CLRBIT(val, bit) (val &= ~(0x01 << bit))
 
 
 /*	CPU Address Space Definitions

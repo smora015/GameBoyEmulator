@@ -20,15 +20,15 @@ void GBCPU::writeByte(byte data, word addr)
     }
     else if (rom_mbc_type == ROM_ONLY)
     {
-        MEM[addr] = data;
-
         // If memory is written to WRAM or ECHO WRAM, write to both. Note: last 512 bytes not echoed.
         if (addr >= WRAM_START && addr <= (WRAM_END - 0x200))
         {
+            MEM[addr] = data;
             MEM[addr + (WRAM_ECHO_START - WRAM_START)] = data;
         }
         else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_END)
         {
+            MEM[addr] = data;
             MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;
         }
         else if (addr == DIV)
@@ -39,6 +39,14 @@ void GBCPU::writeByte(byte data, word addr)
         else if (addr == PPU_DMA)
         {
             PerformDMATransfer(data);
+        }
+        // Debugging Blargg's tests. GB link registers used to output info.
+        else if (addr == SIO_CONTROL && data == 0x81) {
+            printf("%c", readByte(SERIAL_XFER));
+        }
+        else
+        {
+            MEM[addr] = data;
         }
     }
     else
@@ -57,21 +65,30 @@ void GBCPU::writeWord(word data, word addr)
     }
     else if (rom_mbc_type == ROM_ONLY)
     {
-        // Write LSB first
-        MEM[addr] = (byte)(data & 0xFF);
-        MEM[addr + 1] = (byte)((data >> 8) & 0xFF);
-
-
         // If memory is written to WRAM or ECHO WRAM, write to both
         if (addr >= WRAM_START && addr <= WRAM_END)
         {
+            // Write LSB first
+            MEM[addr] = (byte)(data & 0xFF);
+            MEM[addr + 1] = (byte)((data >> 8) & 0xFF);
+
             MEM[addr + (WRAM_ECHO_START - WRAM_START)] = (byte)(data & 0xFF);
             MEM[addr + 1 + (WRAM_ECHO_START - WRAM_START)] = (byte)((data >> 8) & 0xFF);
         }
         else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_START)
         {
+            // Write LSB first
+            MEM[addr] = (byte)(data & 0xFF);
+            MEM[addr + 1] = (byte)((data >> 8) & 0xFF);
+
             MEM[addr + (WRAM_ECHO_START - WRAM_START)] = (byte)(data & 0xFF);
             MEM[addr + 1 + (WRAM_ECHO_START - WRAM_START)] = (byte)((data >> 8) & 0xFF);
+        }
+        else
+        {
+            // Write LSB first
+            MEM[addr] = (byte)(data & 0xFF);
+            MEM[addr + 1] = (byte)((data >> 8) & 0xFF);
         }
     }
     else

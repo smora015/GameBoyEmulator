@@ -29,10 +29,14 @@ int main(int argc, char **argv)
     // Initialize Simple DirectMedia Library for video rendering, audio, and keyboard events
     SDL_Event event;
     SDL_Renderer *renderer;
+    SDL_Texture *texture;
     SDL_Window *window;
     
     SDL_Init(SDL_INIT_EVERYTHING);
     SDL_CreateWindowAndRenderer(160, 144, 0, &window, &renderer);
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, 160, 144); // NOTE: RGBA format needs Alpha as first element, not last!
+
+    // Clear screen with White
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(renderer);
 
@@ -48,22 +52,20 @@ int main(int argc, char **argv)
 
     // Capture memory data into a file for debug purposes after initialization of CPU
     //CPU.printMEM("memory_map.txt");
-
-    int exec_count = 2000;
-
+    
     // Main execution loop
+    bool quit = false;
     while (1) 
     {
+        // Update the screen with the pixel buffer
+        renderPixelBuffer(renderer, texture);
+
         // Execute the CPU and PPU by the number of clock cycles executed during this frame (assuming 60 FPS capped by SDL)
-        int cycles_in_frame = GAMEBOY_CYCLES_FRAME; // 0;
-        while (cycles_in_frame < GAMEBOY_CYCLES_FRAME)
+        int cycles_in_frame = 0; // GAMEBOY_CYCLES_FRAME;
+        while (cycles_in_frame < GAMEBOY_CYCLES_FRAME )
         {
             // Otherwise, execute the current CPU instruction
-            while ((exec_count--) > 0)
-            {
-                CPU.execute();
-            }
-
+            CPU.execute();
 
             // Update timers based on # of cycles the current instruction took
             byte cycles = CPU.cycles; 
@@ -80,15 +82,24 @@ int main(int argc, char **argv)
 
             // Update current number of cycles in this frame
             cycles_in_frame += cycles;
+
+            // Quit if X has been clicked
+            if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
+            {
+                quit = true;
+                break;
+            }
         }
 
-        if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
+        // Check again to quit outside of main game loop to avoid lag
+        if (quit)
             break;
 
-        TestVideoRAM(CPU);
+        //TestVideoRAM(CPU);
 
         // Render the screen
-        renderPixelBuffer(renderer, CPU);
+        //SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
     }
 
@@ -306,7 +317,6 @@ void UpdateTimer(byte cycles, GBCPU & CPU)
     
     return;
 }
-
 
 void UpdateDIV(byte cycles, GBCPU & CPU)
 {

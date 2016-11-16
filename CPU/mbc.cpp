@@ -55,7 +55,7 @@ void GBCPU::MBC1write(word addr, byte data)
             else if (memory_model == rom_banking)
             {
                 // Select the two most significant bits for the ROM bank #
-                current_rom_bank = (current_rom_bank & 0x1F) || ((data & 0x03) << 5);
+                current_rom_bank = (current_rom_bank & 0x1F) | ((data & 0x03) << 5);
             }
         }
     }
@@ -69,7 +69,7 @@ void GBCPU::MBC1write(word addr, byte data)
 
         if (data & 0x1F)
         {
-            current_rom_bank = (data & 0x1F);
+            current_rom_bank = (current_rom_bank & 0xE0) | (data & 0x1F);
         }
     }
 
@@ -111,6 +111,11 @@ void GBCPU::MBC1write(word addr, byte data)
     else if (addr == PPU_DMA)
     {
         PerformDMATransfer(data);
+    }
+
+    // Debugging Blargg's tests. GB link registers used to output info.
+    else if (addr == SIO_CONTROL && data == 0x81) {
+        printf("%c", readByte(SERIAL_XFER));
     }
 
     // Write to other areas of memory

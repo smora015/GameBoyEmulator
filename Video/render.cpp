@@ -1,8 +1,8 @@
 ﻿#include "render.h"
 #include <stdio.h>
 
-// Define variables
-pixel pixel_buffer[160][144]; // 256 x 256 pixels exist, but the true resolution is 160 x 144
+// Pixel Buffer follows the Alpha-Red-Green-Blue format for SDL texture to render copying
+byte pixel_buffer[144][160][4]; // 144 px tall, 160 px wide, 4-bytes for color
 
 
 // Renders the Nintendo scrolling graphic
@@ -12,13 +12,14 @@ void getIntroScreen(GBCPU cpu)
     // refers to a colored pixel or not.
 
     // Initialize pixel buffer
-    for (int x = 0; x < 256; ++x)
+    for (int x = 0; x < 160; ++x)
     {
-        for (int y = 0; y < 256; ++y)
+        for (int y = 0; y < 144; ++y)
         {
-            pixel_buffer[x][y].r = 55;
-            pixel_buffer[x][y].g = 45;
-            pixel_buffer[x][y].b = 25;
+            pixel_buffer[y][x][0] = 0;
+            pixel_buffer[y][x][1] = 255;
+            pixel_buffer[y][x][2] = 255;
+            pixel_buffer[y][x][3] = 255;
         }
     }
 
@@ -48,7 +49,7 @@ void getIntroScreen(GBCPU cpu)
         {
             // Get the byte at current location
             byte data = logo_map[x][y];
-            pixel temp;
+            //pixel temp;
 
             // Render upper nibble
             for (int i = 0; i < 4; ++i)
@@ -56,19 +57,25 @@ void getIntroScreen(GBCPU cpu)
                 if (data & (0x10 << (3 - i)))
                 {
                     //cout << "1 ";
-                    temp.r = 55;
-                    temp.g = 55;
-                    temp.b = 255;
+                    pixel_buffer[y_coord][x_coord][1]   = 55;
+                    pixel_buffer[y_coord][x_coord][2]   = 55;
+                    pixel_buffer[y_coord][x_coord++][3] = 255;
+                    //temp.r = 55;
+                    //temp.g = 55;
+                    //temp.b = 255;
                 }
                 else
                 {
                     //cout << "  ";
-                    temp.r = 55;
-                    temp.g = 45;
-                    temp.b = 25;
+                    pixel_buffer[y_coord][x_coord][1]   = 255;
+                    pixel_buffer[y_coord][x_coord][2]   = 255;
+                    pixel_buffer[y_coord][x_coord++][3] = 255;
+                    //temp.r = 55;
+                    //temp.g = 45;
+                    //temp.b = 25;
                 }
 
-                pixel_buffer[x_coord++][y_coord] = temp;
+                //pixel_buffer[x_coord++][y_coord] = temp;
             }
             //cout << " ";
         }
@@ -79,7 +86,7 @@ void getIntroScreen(GBCPU cpu)
         {
             // Get the byte at current location
             byte data = logo_map[x][y];
-            pixel temp;
+            //pixel temp;
 
             // Render lower nibble
             for (int i = 0; i < 4; ++i)
@@ -87,19 +94,25 @@ void getIntroScreen(GBCPU cpu)
                 if (data & (0x01 << (3 - i)))
                 {
                     //cout << "1 ";
-                    temp.r = 55;
-                    temp.g = 55;
-                    temp.b = 255;
+                    pixel_buffer[y_coord+1][x_coord][1] = 55;
+                    pixel_buffer[y_coord+1][x_coord][2] = 55;
+                    pixel_buffer[y_coord+1][x_coord++][3] = 255;
+                    //temp.r = 55;
+                    //temp.g = 55;
+                    //temp.b = 255;
                 }
                 else
                 {
                     //cout << "  ";
-                    temp.r = 55;
-                    temp.g = 45;
-                    temp.b = 25;
+                    pixel_buffer[y_coord + 1][x_coord][1] = 255;
+                    pixel_buffer[y_coord + 1][x_coord][2] = 255;
+                    pixel_buffer[y_coord + 1][x_coord++][3] = 255;
+                    //temp.r = 55;
+                    //temp.g = 45;
+                    //temp.b = 25;
                 }
 
-                pixel_buffer[x_coord++][y_coord+1] = temp;
+                //pixel_buffer[x_coord++][y_coord+1] = temp;
             }
 
             //cout << " ";
@@ -114,18 +127,17 @@ void getIntroScreen(GBCPU cpu)
 }
 
 // Renders the GameBoy video buffer (256x256)
-void renderPixelBuffer(SDL_Renderer * renderer, GBCPU & CPU)
+void renderPixelBuffer(SDL_Renderer * renderer, SDL_Texture * texture)
 {
-    int scrolly = CPU.readByte(PPU_SCROLLY);
-    int scrollx = CPU.readByte(PPU_SCROLLX);
+    SDL_UpdateTexture(texture, NULL, pixel_buffer, 160 * sizeof(Uint32)); // Last parameter is the size of one full row in the display
 
-    for (int y = 0 /*scrolly*/; y < (144/* + scro0lly*/); ++y)
-    {
-        for (int x = 0 /*scrollx*/; x < (160/* + scrollx*/); ++x)
-        {
-            renderPixel(x, y, renderer, pixel_buffer[x][y]);
-        }
-    }
+    //for (int y = 0; y < 144; ++y)
+    //{
+    //    for (int x = 0; x < (160); ++x)
+    //    {
+    //        renderPixel(x, y, renderer, pixel_buffer[x][y]);
+    //    }
+    //}
 }
 
 // Renders a quad at cell (x, y) with dimensions CELL_LENGTH

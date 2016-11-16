@@ -294,7 +294,7 @@ void extract_header(GBCPU & cpu)
     }
 
     // Determine RAM size
-    cout << "RAM size: ";
+    cout << "External RAM size: ";
     switch (cpu.MEM[0x149])
     {
     case 0x0:

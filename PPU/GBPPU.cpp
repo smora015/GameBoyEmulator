@@ -10,6 +10,7 @@
 #include "GBCPU.h"
 #include "render.h"
 
+// Counter that keeps track of the number of cycles occured to increment the next scanline
 unsigned short scanline_counter = 0;
 
 // TODO: Utilize palette colors for rendering
@@ -40,8 +41,9 @@ void ExecutePPU(byte cycles, GBCPU & CPU)
         else if( CPU.MEM[PPU_LY] < 144)
             RenderScanline(CPU);
 
-        // Reset scanline cycles counter
+        // Reset scanline cycles counter and increment scanline
         scanline_counter = 0;
+        ++CPU.MEM[PPU_LY];
     }
 
 
@@ -81,7 +83,7 @@ void UpdateLCDStatus(GBCPU & CPU)
     else
     {
         // Mode 2 - OAM Period [happens between 77-83 clocks per 465 clocks]
-        if (CPU.MEM[PPU_LY] >= 80)
+        if (scanline_counter >= 80)
         {
             // Set current mode
             CPU.MEM[STAT] = (CPU.MEM[STAT] & 0xFC) | 2;
@@ -91,7 +93,7 @@ void UpdateLCDStatus(GBCPU & CPU)
         }
 
         // Mode 3 - OAM/VRAM (data xfer to LCD) Period [happens between 169-175 clocks per 456 clocks]
-        if (CPU.MEM[PPU_LY] >= 172)
+        if (scanline_counter >= 172)
         {
             // Set current mode
             CPU.MEM[STAT] = (CPU.MEM[STAT] & 0xFC) | 3;
@@ -189,7 +191,6 @@ void RenderScanline(GBCPU & CPU)
         // Sprite rendering not enabled
     }
 
-
 }
 
 void RenderTile(word loc_addr, word data_addr, GBCPU & CPU)
@@ -231,11 +232,13 @@ void RenderTile(word loc_addr, word data_addr, GBCPU & CPU)
         word current_tile_address = start_tile_address + (tile_position_y % 8) * 2;
 
         // Use bit shifting and bitwise OR to get a 2-bit number using the bit at position tile_position
-        pixel color = getRBG( ((CPU.readByte(current_tile_address) >> (6 - (tile_position_x % 8))) & 0x02) +
+        pixel color = getRBG( ((CPU.readByte(current_tile_address)     >> (6 - (tile_position_x % 8))) & 0x02) +
                               ((CPU.readByte(current_tile_address + 1) >> (7 - (tile_position_x % 8))) & 0x01));
 
         // Populate pixel buffer with the tile color. Only use px and scanline in this area because this is the "true" pixel location.
-        pixel_buffer[px][scanline] = color;
+        pixel_buffer[scanline][px][1] = color.r;
+        pixel_buffer[scanline][px][2] = color.g;
+        pixel_buffer[scanline][px][3] = color.b;
     }
 
     return;
@@ -244,16 +247,56 @@ void RenderTile(word loc_addr, word data_addr, GBCPU & CPU)
 void RenderWindow(word loc_addr, word data_addr, GBCPU & CPU)
 {
     // Render the window stored in memory
+    byte scanline = CPU.readByte(PPU_LY);
 
+    // Only render Window tiles if the scanline is within window position
+    if (scanline < CPU.readByte(PPU_WY))
+        return;
 
-    byte window_posX = CPU.readByte(PPU_WX);
-    byte window_posY = CPU.readByte(PPU_WY);
+    // Determine true Y-coordinate for background to be rendered using the scanline (y-coordinate)
+    // Then, determine which tile row we're currently on based on the y-position. Divide by 8 because each tile is 8-pixels vertically, with 32 tiles per row
+    byte tile_position_y = scanline;
+    word tile_row_index = (byte(tile_position_y / 8)) * 32;
 
-    // The location #s are unsigned if they come from $8000, otherwise they're unsigned
-    byte tile_num = CPU.readByte(data_addr);
+    // Render the 160 area based on what Scroll position and scanline we're in
+    for (int px = CPU.readByte(PPU_WX) - 7; px < 160; ++px)
+    {
+        // Get the current x-position based on the WINDOW-X coordinate.
+        // Based off this position, determine which tile within the tile_row_index is to be used to render the current pixel (horizontally)
+        byte tile_position_x = px;
+        word tile_col_index = tile_position_x / 8;
+
+        // Get the final tile # address using the indexes calculated and the base tile use address
+        word tile_num_address = tile_col_index + tile_row_index + loc_addr;
+
+        // Read the tile number from the memory. Either as signed or unsigned offset depending on data address selected
+        signed_word tile_num;  // Multiplied by 16 because each tile takes 16-bytes to render 8x8 pixels
+        word start_tile_address;     // The starting address for the 16 bytes to render the 8x8 pixels
+        if (data_addr == 0x8800) // signed data
+        {
+            tile_num = (signed_byte)CPU.readByte(tile_num_address);
+            start_tile_address = data_addr + (tile_num + 128) * 16; // Add 128 to negate the signed offset. e.g #-128 would be $0*16 = $0 + $8800 = $8800. 
+        }
+        else
+        {
+            tile_num = (byte)CPU.readByte(tile_num_address);
+            start_tile_address = data_addr + tile_num * 16;
+        }
+
+        // Determine which byte out of the 16-byte tile we are in, using the current y-position modulo 8 to get a 0-7 range. x2 because we need 2 bytes per tile
+        word current_tile_address = start_tile_address + (tile_position_y % 8) * 2;
+
+        // Use bit shifting and bitwise OR to get a 2-bit number using the bit at position tile_position
+        pixel color = getRBG( ((CPU.readByte(current_tile_address)     >> (6 - (tile_position_x % 8))) & 0x02) +
+                              ((CPU.readByte(current_tile_address + 1) >> (7 - (tile_position_x % 8))) & 0x01));
+
+        // Populate pixel buffer with the tile color. Only use px and scanline in this area because this is the "true" pixel location.
+        pixel_buffer[scanline][px][1] = color.r;
+        pixel_buffer[scanline][px][2] = color.g;
+        pixel_buffer[scanline][px][3] = color.b;
+    }
 
     return;
-
 }
 
 void RenderSprite(word loc_addr, word data_addr, GBCPU & CPU)
@@ -270,29 +313,29 @@ pixel getRBG(byte value)
     switch (value)
     {
     case 0:
+        t.r = 255;
+        t.b = 255;
+        t.g = 255;
+        break;
+    case 1:
+        t.r = 60;
+        t.b = 60;
+        t.g = 60;
+        break;
+    case 2:
+        t.r = 125;
+        t.b = 125;
+        t.g = 125;
+        break;
+    case 3:
         t.r = 0;
         t.b = 0;
         t.g = 0;
         break;
-    case 1:
-        t.r = 255;
-        t.b = 255;
-        t.g = 255;
-        break;
-    case 2:
-        t.r = 255;
-        t.b = 255;
-        t.g = 255;
-        break;
-    case 3:
-        t.r = 255;
-        t.b = 255;
-        t.g = 255;
-        break;
     default:
         t.r = 255;
         t.b = 0;
-        t.g = 100;
+        t.g = 0;
         break;
     }
 
@@ -304,33 +347,33 @@ void TestVideoRAM(GBCPU & CPU)
 {
     int i = 0x8800;
     // file tile data with all As
-    CPU.MEM[i++] = 0x7C;
-    CPU.MEM[i++] = 0x7C;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0xFE;
-    CPU.MEM[i++] = 0xFE;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0xC6;
-    CPU.MEM[i++] = 0x00;
-    CPU.MEM[i++] = 0x00;
+    //CPU.MEM[i++] = 0x7C;
+    //CPU.MEM[i++] = 0x7C;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0xFE;
+    //CPU.MEM[i++] = 0xFE;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0xC6;
+    //CPU.MEM[i++] = 0x00;
+    //CPU.MEM[i++] = 0x00;
 
 
-    for (int i = 0x9C00; i < 0x9FFF; ++i)
-    {
+    //for (int i = 0x9C00; i < 0x9FFF; ++i)
+    //{
         // file tile #s with all As (tile #0)
-        CPU.MEM[i] = (signed_byte)-128;
-    }
+    //    CPU.MEM[i] = (signed_byte)-128;
+    //}
 
     // trim off half of top left corner
-    CPU.writeByte(4, PPU_SCROLLY);
-    CPU.writeByte(4, PPU_SCROLLX);
+    //CPU.writeByte(4, PPU_SCROLLY);
+    //CPU.writeByte(4, PPU_SCROLLX);
 
     for (int i = 0; i < 145; ++i)
     {

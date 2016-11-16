@@ -43,13 +43,13 @@ inline void GBCPU::ADD(word arg)
     SUBTRACT_FLAG = false;
 
     // Detect half carry
-    if (((HL & 0x0FF) + (arg & 0x0FF)) & 0x1000)
+    if ( ((HL+arg) & 0xFFF) > (HL & 0xFFF) )
         HALF_CARRY_FLAG = true;
     else
         HALF_CARRY_FLAG = false;
 
     // Detects carry
-    if (((HL & 0xFFFF) + (arg & 0xFFFF)) & 0x10000)
+    if (((HL + arg) & 0xFFFF) > (HL & 0xFFFF))
         CARRY_FLAG = true;
     else
         CARRY_FLAG = false;
@@ -63,7 +63,6 @@ inline void GBCPU::ADD(word arg)
 // ADD SP, n
 inline void GBCPU::ADDSP()
 {
-    // TODO: Confirm H and C flag get set based off 11th and 15th bit
     signed_byte arg = signed_byte(readImmByte());
 
     // Reset Z, N flag
@@ -71,13 +70,13 @@ inline void GBCPU::ADDSP()
     ZERO_FLAG = false;
 
     // Detect half carry
-    if (((SP & 0x0FF) + arg) & 0x1000)
+    if (((SP & 0x0F) + (arg & 0x0F) ) & 0x10)
         HALF_CARRY_FLAG = true;
     else
         HALF_CARRY_FLAG = false;
 
     // Detects carry
-    if (((SP & 0xFFFF) + (arg & 0xFFFF)) & 0x10000)
+    if (((SP & 0xFF) + (arg & 0xFF)) & 0x100)
         CARRY_FLAG = true;
     else
         CARRY_FLAG = false;
@@ -217,12 +216,9 @@ inline void GBCPU::SWAP(byte & reg)
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
-// Decimal Adjust Register A
+// Decimal Adjust Register A. This Opcode is still a mystery to me and has been taken from forums, sites, etc.
 inline void GBCPU::DAA()
 {
-    // Reset flag H
-    HALF_CARRY_FLAG = false;
-
     byte temp = A;
 
     // Adjust the binary decimal digits if we have a N and C or H flag
@@ -245,13 +241,17 @@ inline void GBCPU::DAA()
 
     A = temp;
 
+    // Set Carry 
     if ((temp & 0x100) == 0x100)
-        HALF_CARRY_FLAG = true;
+        CARRY_FLAG = true;
     else
-        HALF_CARRY_FLAG = false;
+        CARRY_FLAG = false;
 
-    // Detect zero
+    // Detect Zero
     ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
+
+    // Clear Half-Carry
+    CARRY_FLAG = false;
 }
 
 // Rotate A left
@@ -537,8 +537,8 @@ inline void GBCPU::BIT(byte bit, byte & reg)
 inline void GBCPU::JP()
 {
     PC = readImmWord();
-    cout << "Jumping to: " << PC << "or ";
-    printf("%X!\n", PC);
+    //cout << "Jumping to: " << PC << "or ";
+    //printf("%X!\n", PC);
 }
 
 // JR cc
@@ -590,15 +590,15 @@ CPU Opcode Execution Instruction Macros
 
 // TODO: CHECK TO SEE IF ALL WORD LOADS GET THE LSB FIRST
 // TODO: Add comments for each opcode about what the instruction does
-void GBCPU::OP00() { cout << "NOP" << endl; ++PC; cycles = 4; }                 // NOP
+void GBCPU::OP00() { /*cout << "NOP" << endl;*/ ++PC; cycles = 4; }                 // NOP
 void GBCPU::OP01() { SetBC( readImmWord() ); PC += 3; cycles = 12; }            // LD BC, ##
 void GBCPU::OP02() { writeByte(A, GetBC()); ++PC; cycles = 8; }                 // LD (BC), A
 void GBCPU::OP03() { INC(B, C); ++PC; cycles = 8; }                             // INC BC
 void GBCPU::OP04() { INCR(B); ++PC; cycles = 4; }                               // INC B
 void GBCPU::OP05() { DECR(B); ++PC; cycles = 4; }                               // DEC B
-void GBCPU::OP06() { B = readByte(PC+1); PC += 2; cycles = 8; }                 // LD B, #
+void GBCPU::OP06() { B = readImmByte(); PC += 2; cycles = 8; }                  // LD B, #
 void GBCPU::OP07() { RLCA(); ++PC; cycles = 4; }                                // RLCA
-void GBCPU::OP08() { writeWord(SP, readImmWord()); PC += 3; cycles = 20; }      // TODO: FIX WITH writeWord( )
+void GBCPU::OP08() { writeWord(SP, readImmWord()); PC += 3; cycles = 20; }      // LD (SP), ##
 void GBCPU::OP09() { ADD(GetBC()); ++PC; cycles = 8; }                          // ADD HL, BC
 void GBCPU::OP0A() { A = readByte(GetBC()); ++PC; cycles = 8; }                 // LD A, (BC)
 void GBCPU::OP0B() { DEC(B, C); ++PC; cycles = 8; }                             // DEC BC
@@ -808,7 +808,7 @@ void GBCPU::OPC7() { RST(0x00); cycles = 32; }
 void GBCPU::OPC8() { if (ZERO_FLAG == true) RET(); else ++PC; cycles = 8; }
 void GBCPU::OPC9() { RET(); cycles = 8; }
 void GBCPU::OPCA() { if (ZERO_FLAG == true) JP(); else PC += 3; cycles = 12; }
-void GBCPU::OPCB() { (this->*(CBopcodes)[MEM[PC+1]])(); cout << "CB Opcode called!" << endl; /* PREFIX CB OPCODES - DO NOT USE. */ }
+void GBCPU::OPCB() { (this->*(CBopcodes)[MEM[PC+1]])(); /*cout << "CB Opcode called!" << endl;*/ /* PREFIX CB OPCODES - DO NOT USE. */ }
 void GBCPU::OPCC() { if (ZERO_FLAG == true) CALL(); else PC += 3; cycles = 12; }
 void GBCPU::OPCD() { CALL(); cycles = 12; } // CALL nn
 void GBCPU::OPCE() { ADD(A, readImmByte() + (CARRY_FLAG == true)); PC += 2; cycles = 8; }
@@ -831,9 +831,9 @@ void GBCPU::OPDD() { cout << "ILLEGAL OPCODE CALLED!" << endl; /* DO NOTHING - B
 void GBCPU::OPDE() { SUB(A, readImmByte() + (CARRY_FLAG == true)); PC += 2; cycles = 8; }
 void GBCPU::OPDF() { RST(0x18); cycles = 32; }
 
-void GBCPU::OPE0() { printf("Loading A into address %X!\n", 0xFF00 + readImmByte()); writeByte(A, 0xFF00 + readImmByte()); PC += 2; cycles = 12; } // LD ($FF00 + #), A
+void GBCPU::OPE0() { /*printf("Loading A into address %X!\n", 0xFF00 + readImmByte());*/ writeByte(A, 0xFF00 + readImmByte()); PC += 2; cycles = 12; } // LD ($FF00 + #), A
 void GBCPU::OPE1() { POP(H, L); ++PC; cycles = 12; }
-void GBCPU::OPE2() { printf("Loading A into address %X!\n", 0xFF00 + C); writeByte(A, 0xFF00 + C); ++PC; cycles = 8; } // LD ($FF00 + C), A
+void GBCPU::OPE2() { /*printf("Loading A into address %X!\n", 0xFF00 + C); */ writeByte(A, 0xFF00 + C); ++PC; cycles = 8; } // LD ($FF00 + C), A
 void GBCPU::OPE3() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPE4() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPE5() { PUSH(H, L); ++PC; cycles = 16; }
@@ -848,21 +848,21 @@ void GBCPU::OPED() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPEE() { XOR( A, readImmByte() ); PC += 2; cycles = 8; }
 void GBCPU::OPEF() { RST(0x28); cycles = 32; }
 
-void GBCPU::OPF0() { printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + readImmByte()], 0xFF00 + readImmByte()); A = readByte(0xFF00 + readImmByte()); PC += 2; cycles = 12; } // LD A, ($FF00 + #)
+void GBCPU::OPF0() { /*printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + readImmByte()], 0xFF00 + readImmByte());*/ A = readByte(0xFF00 + readImmByte()); PC += 2; cycles = 12; } // LD A, ($FF00 + #)
 void GBCPU::OPF1() { byte temp = 0x00; POP(A, temp); SetF(temp); ++PC; cycles = 12; }
-void GBCPU::OPF2() { printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + C], 0xF00 + C); A = readByte(0xFF00 + C); ++PC; cycles = 8; } // LD A, ($FF00 + C)
-void GBCPU::OPF3() { IME = true; ++PC; cycles = 4; } // DI
+void GBCPU::OPF2() { /*printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + C], 0xF00 + C);*/ A = readByte(0xFF00 + C); ++PC; cycles = 8; } // LD A, ($FF00 + C)
+void GBCPU::OPF3() { IME = false; ++PC; cycles = 4; }                     // DI
 void GBCPU::OPF4() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPF5() { PUSH(A, GetF()); ++PC; cycles = 16; }
 void GBCPU::OPF6() { OR(A, readImmByte() ); PC += 2;  cycles = 8; }
 void GBCPU::OPF7() { RST(0x30); cycles = 32; }
 void GBCPU::OPF8() { SetHL( word(SP + (signed_byte)readImmByte()) ); PC += 2; cycles = 12; SUBTRACT_FLAG = false; ZERO_FLAG = false; 
                      // Detect half carry and carry
-                     ((SP & 0x0F) + ((signed_byte)readImmByte() & 0x0F)) ? HALF_CARRY_FLAG = true : HALF_CARRY_FLAG = false;
-                     ((SP & 0x0F) + ((signed_byte)readImmByte() & 0x0F)) ? CARRY_FLAG = true : CARRY_FLAG = false; }                       // LD HL SP, n
+                     ((SP & 0x0F) +  ((signed_byte)readImmByte() & 0x0F)) ? HALF_CARRY_FLAG = true : HALF_CARRY_FLAG = false;
+                     ((SP & 0x0FF) + ((signed_byte)readImmByte() & 0xFF)) ? CARRY_FLAG = true : CARRY_FLAG = false; }                      // LD HL SP, n
 void GBCPU::OPF9() { SP = GetHL(); ++PC; cycles = 8; }                                                                                     // LD SP, HL
 void GBCPU::OPFA() { A = readByte(readImmWord()); PC += 3; cycles = 16; } // LD A, (##)
-void GBCPU::OPFB() { IME = false; ++PC; cycles = 4; } // EI
+void GBCPU::OPFB() { IME = true; ++PC; cycles = 4; }                      // EI
 void GBCPU::OPFC() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPFD() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPFE() { CP(A, readImmByte() ); PC += 2; cycles = 8; }

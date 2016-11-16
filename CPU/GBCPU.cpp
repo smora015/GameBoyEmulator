@@ -193,7 +193,7 @@ GBCPU::~GBCPU()
 
 void GBCPU::execute()
 {
-    printf("PC: $%X OPCODE: %X AF: 0x%X%X BC: 0x%X%X DE: 0x%X%X HL: 0x%X%X SP: 0x%X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
+    //printf("PC: $%X OPCODE: %X AF: 0x%X%X BC: 0x%X%X DE: 0x%X%X HL: 0x%X%X SP: 0x%X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
 	(this->*(opcodes)[MEM[PC]])();
 }
 
