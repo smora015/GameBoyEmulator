@@ -12,7 +12,7 @@ void UpdateLCDStatus(GBCPU & CPU);
 void RenderScanline(GBCPU & CPU);
 void RenderTile(word loc_addr, word data_addr, GBCPU & CPU);
 void RenderWindow(word loc_addr, word data_addr, GBCPU & CPU);
-void RenderSprite(word loc_addr, word data_addr, GBCPU & CPU);
+void RenderSprite(GBCPU & CPU, bool use_8X16);
 struct pixel getRBG(byte value);
 void TestVideoRAM(GBCPU & CPU);
 
@@ -51,6 +51,17 @@ Bit 1 - 0 - Mode Flag(Mode 0 - 3, see below) (Read Only)
 3 : During Transferring Data to LCD Driver
 */
 
+
+/*
+    Sprite data byte 3 - Sprite Attributes/Flags
+    Bit7   OBJ-to-BG Priority (0=OBJ Above BG, 1=OBJ Behind BG color 1-3)
+    (Used for both BG and Window. BG color 0 is always behind OBJ)
+    Bit6   Y flip          (0=Normal, 1=Vertically mirrored)
+    Bit5   X flip          (0=Normal, 1=Horizontally mirrored)
+    Bit4   Palette number  **Non CGB Mode Only** (0=OBP0, 1=OBP1)
+    Bit3   Tile VRAM-Bank  **CGB Mode Only**     (0=Bank 0, 1=Bank 1)
+    Bit2-0 Palette number  **CGB Mode Only**     (OBP0-7)
+*/
 // LCD Positioning and Scrolling
 #define PPU_SCROLLY          0xFF42 // LCD Y display position 
 #define PPU_SCROLLX          0xFF43 // LCD X display position

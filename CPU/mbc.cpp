@@ -8,6 +8,7 @@
 */
 #include "mbc.h"
 #include "GBCPU.h"
+#include "GBPPU.h"
 #include "GBCartridge.h"
 
 // Define MBC variables
@@ -20,11 +21,11 @@ bool ram_bank_access_enabled;    // Indicates if RAM read/writes are enabled
 void GBCPU::MBC1write(word addr, byte data)
 {
     // Write to external RAM if enabled
-    if ((addr >= EXTERNAL_RAM_START) && (addr <= EXTERNAL_RAM_END) &&
-        (ram_bank_access_enabled == true))
+    if ((addr >= EXTERNAL_RAM_START) && (addr <= EXTERNAL_RAM_END))
     {
-        // Read the address at the current RAM bank number
-        ext_ram[current_ram_bank * 0x2000 + (addr - EXTERNAL_RAM_START)] = data;
+        // Read the address at the current RAM bank number if enabled
+        if(ram_bank_access_enabled == true)
+            ext_ram[current_ram_bank * 0x2000 + (addr - EXTERNAL_RAM_START)] = data;
     }
 
     // A write (XXXX XXX1b) to the upper half of switchable ROM selects ROM/RAM configuration
@@ -74,51 +75,70 @@ void GBCPU::MBC1write(word addr, byte data)
     }
 
     // A write (XXXX BBBBb) to the lower half of internal ROM enables/disable switchable RAM read/write
-    else if ((addr >= ROM_START) && (addr <= 0x1FFF) && (memory_model == ram_banking))
+    else if ((addr >= ROM_START) && (addr <= 0x1FFF))
     {
-        // Only allow access if we are in RAM banking mode (4/32)
-        if (data & 0x0A)
+        if (memory_model == ram_banking)
         {
-            // Enable RAM (default)
-            ram_bank_access_enabled = true;
+            // Only allow access if we are in RAM banking mode (4/32)
+            if (data & 0x0A)
+            {
+                // Enable RAM (default)
+                ram_bank_access_enabled = true;
+            }
+            else
+            {
+                // Disable RAM
+                ram_bank_access_enabled = false;
+            }
         }
-        else
-        {
-            // Disable RAM
-            ram_bank_access_enabled = false;
-        }
+
     }
 
+    /*
     // If memory is written to WRAM or ECHO WRAM, write to both. Note: last 512 bytes not echoed.
     else if (addr >= WRAM_START && addr <= (WRAM_END - 0x200))
     {
         MEM[addr] = data;
         MEM[addr + (WRAM_ECHO_START - WRAM_START)] = data;
-    }
+        // Only copy data when we write to WRAM_ECHO, not WRAM
+    }*/
     
+    // Write data from ECHO_WRAM to WRAM as well
     else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_END)
     {
         MEM[addr] = data;
-        MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;
+        MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;         
     }
 
+    // Writing to unused area in Memory Map
+    else if (addr >= 0xFEA0 && addr < 0xFEFF)
+    {
+        cout << "Restricted memory region!" << endl;
+    }
+
+    // Reset the DIV register if we're writing to it
     else if (addr == DIV)
-    {
-        // Reset the DIV register if we're writing to it
         MEM[DIV] = 0;
-    }
 
-    else if (addr == PPU_DMA)
-    {
-        PerformDMATransfer(data);
-    }
+    // Reset scanline counter if written to
+    else if (addr == PPU_LY)
+        MEM[PPU_LY] = 0;
 
     // Debugging Blargg's tests. GB link registers used to output info.
-    else if (addr == SIO_CONTROL && data == 0x81) {
+    else if (addr == SIO_CONTROL && data == 0x81)
         printf("%c", readByte(SERIAL_XFER));
+
+    else if (addr == INTERRUPT_FLAG)
+    {
+        //cout << "MANUALLY SETTING AN INTERRUPT!" << endl;
+        MEM[addr] = data;
     }
 
-    // Write to other areas of memory
+    // Sprite DMA Trasnfer
+    else if (addr == PPU_DMA)
+        PerformDMATransfer(data);
+
+    // Write to other areas of memory normally
     else
     {
         MEM[addr] = data;
@@ -129,25 +149,36 @@ void GBCPU::MBC1write(word addr, byte data)
 // MBC1read: Read data from RAM/ROM banks in a MBC1 memory model
 byte GBCPU::MBC1read(word addr)
 {
-    if ((addr > 0x0000) && (addr <= ROM_END))
-    {
-        // Always read the first 16 KBytes of memory in this region (bank #0)
-        return MEM[addr];
-    }
-    else if ((addr >= EXTERNAL_ROM_START) && (addr <= EXTERNAL_ROM_END))
-    {
-        // Read the address at the current ROM bank number
+    // External ROM read from current bank #
+    if ((addr >= EXTERNAL_ROM_START) && (addr <= EXTERNAL_ROM_END))
         return ext_rom[current_rom_bank * 0x4000 + (addr - EXTERNAL_ROM_START)];
-    }
-    else if ((addr >= EXTERNAL_RAM_START) && (addr <= EXTERNAL_RAM_END) &&
-             (ram_bank_access_enabled == true))
+
+    // External RAM read
+    else if ((addr >= EXTERNAL_RAM_START) && (addr <= EXTERNAL_RAM_END) )
     {
-        // Read the address at the current RAM bank number
-        return ext_ram[current_ram_bank * 0x2000 + (addr - EXTERNAL_RAM_START)];
+        // Read the address at the current RAM bank number if enabled
+        if (ram_bank_access_enabled == true)
+            return ext_ram[current_ram_bank * 0x2000 + (addr - EXTERNAL_RAM_START)];
+        else
+        {
+            cout << "Attempting to read external RAM when not enabled!!" << endl;
+            return 0x00;
+        }
+            
     }
+
+    // Read ECHO WRAM from WRAM
+    else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_END)
+        return MEM[addr - (WRAM_ECHO_START - WRAM_START)];
+
+    // Reading from unused area in Memory Map
+    else if (addr >= 0xFEA0 && addr < 0xFEFF)
+    {
+        cout << "Restricted memory region!" << endl;
+        return 0x00;
+    }
+
+    // Read from other areas of memory normally
     else
-    {
-        // Read from other areas of memory
         return MEM[addr];
-    }
 }

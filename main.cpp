@@ -12,6 +12,8 @@
 #include "GBPPU.h"        // Game Boy PPU library
 #include "render.h"       // Graphics Rendering library
 
+
+
 using namespace std;
 
 
@@ -53,6 +55,9 @@ int main(int argc, char **argv)
     // Capture memory data into a file for debug purposes after initialization of CPU
     //CPU.printMEM("memory_map.txt");
     
+    // Limit max # of CPU executions from debug use
+    int counter = 0;
+
     // Main execution loop
     bool quit = false;
     while (1) 
@@ -64,6 +69,7 @@ int main(int argc, char **argv)
         int cycles_in_frame = 0; // GAMEBOY_CYCLES_FRAME;
         while (cycles_in_frame < GAMEBOY_CYCLES_FRAME )
         {
+            ++counter; 
             // Otherwise, execute the current CPU instruction
             CPU.execute();
 
@@ -84,7 +90,7 @@ int main(int argc, char **argv)
             cycles_in_frame += cycles;
 
             // Quit if X has been clicked
-            if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
+            if ((SDL_PollEvent(&event) && event.type == SDL_QUIT))// || counter > 250000)
             {
                 quit = true;
                 break;
@@ -149,6 +155,7 @@ void CheckInterrupts(GBCPU & CPU)
     else if ((interrupt_enable & 0x04) && // Timer Interrupt
         (interrupt_req & 0x04))
     {
+        cout << "TIMER INTERRUPT!" << endl;
         // Disable interrupt, reset Request bit and set the PC to Timer interrupt routine
         CPU.IME = false;
         CPU.writeByte(interrupt_req & (~0x04), INTERRUPT_FLAG);
@@ -196,6 +203,7 @@ void UpdateTimer(byte cycles, GBCPU & CPU)
     // If Timer is enabled
     if (CPU.MEM[TCON] & 0x04)
     {
+        cout << "t enabled..." << endl;
         switch (CPU.MEM[TCON] & 0x03)
         {
             // CPU Clock / 1024 = 4096 Hz
@@ -311,7 +319,11 @@ void UpdateTimer(byte cycles, GBCPU & CPU)
             }
 
             default:
+            {
+                cout << "TIMER NOT WORKING" << endl;
                 break;
+            }
+                
         }
     }
     
@@ -329,6 +341,7 @@ void UpdateDIV(byte cycles, GBCPU & CPU)
         // Increment memory counter
         ++CPU.MEM[DIV];
         CPU.DIV_counter = 0;
+        //cout << CPU.MEM[DIV] << " ";
     }
 
     return;

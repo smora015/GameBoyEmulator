@@ -193,7 +193,7 @@ GBCPU::~GBCPU()
 
 void GBCPU::execute()
 {
-    //printf("PC: $%X OPCODE: %X AF: 0x%X%X BC: 0x%X%X DE: 0x%X%X HL: 0x%X%X SP: 0x%X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
+    //printf("PC: $%04X OPCODE: %02X AF: 0x%02X%02X BC: 0x%02X%02X DE: 0x%02X%02X HL: 0x%02X%02X SP: 0x%04X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
 	(this->*(opcodes)[MEM[PC]])();
 }
 
@@ -208,6 +208,7 @@ void GBCPU::printMEM(string name)
 void GBCPU::init()
 {
     cout << "GBCPU initializng...";
+
 
     // Initialize internal variables
     IME = true; // TODO: confirm initial value
@@ -226,6 +227,7 @@ void GBCPU::init()
     E = (byte) 0x56; //0xD8;
     H = (byte) 0x00; //0x01; 
     L = (byte) 0x0D; //0x4D;
+    
     SP = (word) 0xFFFE;
 
     MEM[0xFF05] = (byte) 0x00; // TIMA
