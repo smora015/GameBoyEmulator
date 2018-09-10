@@ -12,7 +12,7 @@
 #include "GBPPU.h"        // Game Boy PPU library
 #include "render.h"       // Graphics Rendering library
 
-
+//#define DEBUG_GAMEBOY
 
 using namespace std;
 
@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     SDL_RenderClear(renderer);
 
     // Load ROM data and initialize CPU/PPU
-    string default_rom = "cpu_instrs.gb";        // "Tetris (World).gb"
+    string default_rom = "BIOS.gb"; //"01-special.gb";//"02-interrupts.gb";//"cpu_instrs.gb"; // "Tetris (World).gb"; 
     GBCPU CPU = GBCPU();
 
     load_rom(argc < 2 ? default_rom : string(argv[1]), CPU);
@@ -58,9 +58,12 @@ int main(int argc, char **argv)
     // Limit max # of CPU executions from debug use
     int counter = 0;
 
-    // Main execution loop
+	// This flag captures the user clicking 'X' in order to elegantly quit the program
     bool quit = false;
-    while (1) 
+
+
+	// Main execution loop
+	while (1)
     {
         // Update the screen with the pixel buffer
         renderPixelBuffer(renderer, texture);
@@ -97,6 +100,13 @@ int main(int argc, char **argv)
             }
         }
 
+		// Quit if X has been clicked
+		if ((SDL_PollEvent(&event) && event.type == SDL_QUIT))// || counter > 250000)
+		{
+			quit = true;
+			break;
+		}
+
         // Check again to quit outside of main game loop to avoid lag
         if (quit)
             break;
@@ -118,6 +128,9 @@ int main(int argc, char **argv)
 
 void CheckInterrupts(GBCPU & CPU)
 {
+	/* @TODO: Optimization/Cleanup of CheckInterrupts:
+              1) Change interrupt routine locations to macros
+			  2) Move function to interrupts.c (within CPU folder) */
     // Only process interrupts if Interrupt Master Enable Flag is TRUE
     if (CPU.IME == false)
         return;
@@ -134,26 +147,36 @@ void CheckInterrupts(GBCPU & CPU)
         CPU.writeByte(interrupt_req & (~0x01), INTERRUPT_FLAG);
 
         // Push the current PC onto stack before calling service routine.
-        CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
-        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) >> 8), CPU.SP);
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) & 0x00FF), CPU.SP);
+
+		/*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
+        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;*/
 
         CPU.PC = 0x0040;
     }    
     else if ((interrupt_enable & 0x02) && // LCD STAT
-        (interrupt_req & 0x02))
+             (interrupt_req & 0x02))
     {
         // Disable interrupt, reset Request bit and set the PC to LCD interrupt routine
         CPU.IME = false;
         CPU.writeByte(interrupt_req & (~0x02), INTERRUPT_FLAG);
 
         // Push the current PC onto stack before calling service routine.
-        CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
-        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) >> 8), CPU.SP);
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) & 0x00FF), CPU.SP);
+
+        /*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
+        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;*/
 
         CPU.PC = 0x0048;
     }    
     else if ((interrupt_enable & 0x04) && // Timer Interrupt
-        (interrupt_req & 0x04))
+             (interrupt_req & 0x04))
     {
         cout << "TIMER INTERRUPT!" << endl;
         // Disable interrupt, reset Request bit and set the PC to Timer interrupt routine
@@ -161,34 +184,49 @@ void CheckInterrupts(GBCPU & CPU)
         CPU.writeByte(interrupt_req & (~0x04), INTERRUPT_FLAG);
 
         // Push the current PC onto stack before calling service routine.
-        CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
-        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) >> 8), CPU.SP);
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) & 0x00FF), CPU.SP);
+
+		/*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
+        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;*/
 
         CPU.PC = 0x0050;
     }    
     else if ((interrupt_enable & 0x08) && // Serial Interrupt
-        (interrupt_req & 0x08))
+             (interrupt_req & 0x08))
     {
         // Disable interrupt, reset Request bit and set the PC to Serial interrupt routine
         CPU.IME = false;
         CPU.writeByte(interrupt_req & (~0x08), INTERRUPT_FLAG);
 
         // Push the current PC onto stack before calling service routine.
-        CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
-        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) >> 8), CPU.SP);
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) & 0x00FF), CPU.SP);
+
+		/*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
+        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;*/
 
         CPU.PC = 0x0058;
     }    
     else if ((interrupt_enable & 0x10) && // Joypad Interrupt
-        (interrupt_req & 0x10))
+             (interrupt_req & 0x10))
     {
         // Disable interrupt, reset Request bit and set the PC to Joypad interrupt routine
         CPU.IME = false;
         CPU.writeByte(interrupt_req & (~0x10), INTERRUPT_FLAG);
 
         // Push the current PC onto stack before calling service routine.
-        CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
-        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) >> 8), CPU.SP);
+        --CPU.SP;
+        CPU.writeByte(((CPU.PC) & 0x00FF), CPU.SP);
+
+		/*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
+        CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;*/
 
         CPU.PC = 0x0060;
     }
@@ -198,23 +236,27 @@ void CheckInterrupts(GBCPU & CPU)
 
 void UpdateTimer(byte cycles, GBCPU & CPU)
 {
-    // Update the timer register in memory depending on the frequency specified by the Timer Control
-
-    // If Timer is enabled
-    if (CPU.MEM[TCON] & 0x04)
+    /* @TODO: Optimize/clean up UpdateTimer function:
+              1) Clean up macro names to be consistent with GBCPU docs
+              2) Optimize cycle calculations
+              3) Use macros for timer interrupt flag mask
+        */
+    // Timer is enabled if TAC register, bit 2 is HIGH
+    if (CPU.readByte(TCON) & 0x04)
     {
-        cout << "t enabled..." << endl;
-        switch (CPU.MEM[TCON] & 0x03)
+        // TAC register, bits 1 and 0 determine the timer frequency
+        //cout << "t enabled..." << endl;
+        switch (CPU.readByte(TCON) & 0x03)
         {
             // CPU Clock / 1024 = 4096 Hz
             case 0x00:
             {
                 // Increment cycle counter. If we've hit the count, then update the counter
                 CPU.TMA_counter += cycles;
-                if (CPU.TMA_counter > (GAMEBOY_CLOCK_CYCLES/4096))
+                if (CPU.TMA_counter > 256)//(GAMEBOY_CLOCK_CYCLES/4096))
                 {
                     // Check for overflow
-                    if (CPU.MEM[TIMA] == 255)
+                    if (CPU.readByte(TIMA) == 255)
                     {
                         // Set the counter to the value of the Timer Modulo flag 
                         CPU.MEM[TIMA] = CPU.MEM[TMOD];
@@ -234,30 +276,40 @@ void UpdateTimer(byte cycles, GBCPU & CPU)
                 break;
             }
 
-            // CPU Clock / 16 = 262144 Hz
+            // CPU Clock / 16 = 262144 Hz. Need to / 4 for some reason
             case 0x01:
             {
-                // Increment cycle counter. If we've hit the count, then update the counter
+                // Increment cycle counter. If we've hit the count, then update the counter.
                 CPU.TMA_counter += cycles;
-                if (CPU.TMA_counter > (GAMEBOY_CLOCK_CYCLES / 262144))
+                if (CPU.TMA_counter > 4)//(GAMEBOY_CLOCK_CYCLES / 262144))
                 {
                     // Check for overflow
-                    if (CPU.MEM[TIMA] == 255)
+                    if (CPU.MEM[TIMA] == 255)//(((16 / CPU.TMA_counter) + CPU.MEM[TIMA]) >= 255)
                     {
                         // Set the counter to the value of the Timer Modulo flag 
                         CPU.MEM[TIMA] = CPU.MEM[TMOD];
 
                         // Request timer interrupt
                         CPU.MEM[INTERRUPT_FLAG] |= 0x04;
+
+                        // Reset cycle counter
+                        //CPU.TMA_counter = 0;
                     }
                     else
                     {
-                        // Otherwise, increment memory counter
+                        // Otherwise, increment memory counter by the number of times the CPU cycle counter has gone over the
+                        // selected frequency. This is not done incrementally because we are simulating multiple cycles happening
+                        // over incremental loops in the software.
+                        //CPU.MEM[TIMA] += (16 / CPU.TMA_counter);
                         ++CPU.MEM[TIMA];
+                        // Leave only remainder of cycles in counter.
+                        //CPU.TMA_counter = 16 % CPU.TMA_counter;
+
                     }
 
                     // Reset cycle counter
                     CPU.TMA_counter = 0;
+
                 }
                 break;
             }
@@ -267,7 +319,7 @@ void UpdateTimer(byte cycles, GBCPU & CPU)
             {
                 // Increment cycle counter. If we've hit the count, then update the counter
                 CPU.TMA_counter += cycles;
-                if (CPU.TMA_counter > (GAMEBOY_CLOCK_CYCLES / 65536))
+                if (CPU.TMA_counter > 16)//(GAMEBOY_CLOCK_CYCLES / 65536))
                 {
                     // Check for overflow
                     if (CPU.MEM[TIMA] == 255)
@@ -295,7 +347,7 @@ void UpdateTimer(byte cycles, GBCPU & CPU)
             {
                 // Increment cycle counter. If we've hit the count, then update the counter
                 CPU.TMA_counter += cycles;
-                if (CPU.TMA_counter > (GAMEBOY_CLOCK_CYCLES / 16384))
+                if (CPU.TMA_counter > 64) //(GAMEBOY_CLOCK_CYCLES / 16384))
                 {
                     // Check for overflow
                     if (CPU.MEM[TIMA] == 255)

@@ -2,7 +2,7 @@
 #define GAMEBOY_H
 
 
-// TODO:
+// @TODO:
 // Audio file and macro definitions
 // Confirm if byte data type should be unsigned or not (for negative offset operations)
 // CPU Start up procedure - half done
@@ -15,7 +15,11 @@ typedef unsigned short word;
 typedef signed short signed_word;
 
 /*
-	CPU Definitions and Macros
+	CPU Definitions and Macros.
+
+    Notes:
+
+    1) 'x' is denoted as the MSB, while 'y' is the LSB.
 */
 
 // Cast LSB and MSB as a WORD (16 bits)
@@ -32,8 +36,8 @@ typedef signed short signed_word;
                       y = (byte)((temp) & 0xFF);
 
 // PUSH/POP to/from stack
-#define PUSH(x, y)   MEM[SP] = y; --SP; MEM[SP] = x; --SP;         // PUSH stores LSB first, then MSB
-#define POP(x, y)    ++SP; x = MEM[SP]; ++SP; y = MEM[SP];         // POP loads MSB first, then LSB
+#define PUSH(x, y)   --SP; GBCPU::writeByte(x, SP); --SP; GBCPU::writeByte(y, SP);         // PUSH stores MSB first, then LSB (little-endian CPU)
+#define POP(x, y)    y = GBCPU::readByte(SP); ++SP; x = GBCPU::readByte(SP); ++SP;         // POP loads LSB first, then MSB
 
 // Set and clear bits (used mainly for setting status register)
 #define SETBIT(val, bit) (val |= (0x01 << bit))

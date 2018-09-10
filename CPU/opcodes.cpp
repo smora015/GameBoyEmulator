@@ -16,22 +16,59 @@ inline void GBCPU::ADD(byte & reg, byte arg)
     // Reset N flag
     SUBTRACT_FLAG = false;
 
+    word begin = A;
+    word result = A + arg;
+
     // Detect half carry
-    if (((reg & 0x0F) + (arg & 0x0F)) & 0x10)
+    if ((result & 0x0F) < (begin & 0x0F))
         HALF_CARRY_FLAG = true;
     else
         HALF_CARRY_FLAG = false;
 
-    // Detect carry
-    if (((reg & 0x0FF) + (arg & 0x0FF)) & 0x100)
+    if ((result & 0xFF) < (begin & 0xFF))
         CARRY_FLAG = true;
     else
         CARRY_FLAG = false;
 
-    reg += arg;
+    reg = (byte) (result & 0xFF);
 
     // Detect zero
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
+}
+
+// ADDC A, n
+inline void GBCPU::ADDC(byte arg)
+{
+    //printf("PC: $%04X OPCODE: %02X AF: 0x%02X%02X BC: 0x%02X%02X DE: 0x%02X%02X HL: 0x%02X%02X SP: 0x%04X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
+
+    // Reset N flag
+    SUBTRACT_FLAG = false;
+
+    // Prevent missingc carry bits from adding 8-bit values
+    word reg = A;
+    word add = arg;
+
+    word begin = reg;
+    word result = reg + add + ((CARRY_FLAG == true) ? 0x01 : 0x00);
+
+    // Detect half carry
+    if ((result & 0x0F) < (begin & 0x0F))
+        HALF_CARRY_FLAG = true;
+    else
+        HALF_CARRY_FLAG = false;
+
+    if ((result & 0xFF) < (begin & 0xFF))
+        CARRY_FLAG = true;
+    else
+        CARRY_FLAG = false;
+
+    A = (byte)(result & 0xFF);
+
+    // Detect zero
+    ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
+
+    //printf("PC: $%04X OPCODE: %02X AF: 0x%02X%02X BC: 0x%02X%02X DE: 0x%02X%02X HL: 0x%02X%02X SP: 0x%04X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
+
 }
 
 // ADD HL, n
@@ -89,7 +126,7 @@ inline void GBCPU::SUB(byte & reg, byte arg)
     SUBTRACT_FLAG = true;
 
     // Detect half carry
-    if (((reg - arg) & 0x0F) >= (reg & 0xF))
+    if (((reg - arg) & 0x0F) > (reg & 0xF))
         HALF_CARRY_FLAG = true;
     else
         HALF_CARRY_FLAG = false;
@@ -104,6 +141,36 @@ inline void GBCPU::SUB(byte & reg, byte arg)
 
     // Detect zero
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
+}
+
+// SUBC A, n
+inline void GBCPU::SUBC(byte arg)
+{
+    // Reset N flag
+    SUBTRACT_FLAG = true;
+
+    // Prevent missingc carry bits from adding 8-bit values
+    word reg = A;
+    word sub = arg;
+
+    word begin = reg;
+    word result = reg - sub + ((CARRY_FLAG == true) ? 0x0001 : 0x0000);
+
+    // Detect no borrow
+    if ((result & 0x0F) > (begin & 0x0F))
+        HALF_CARRY_FLAG = true;
+    else
+        HALF_CARRY_FLAG = false;
+
+    if ((result & 0xFF) > (begin & 0xFF))
+        CARRY_FLAG = true;
+    else
+        CARRY_FLAG = false;
+
+    A = (byte)(result & 0xFF);
+
+    // Detect zero
+    ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
 inline void GBCPU::AND(byte & reg, byte arg)
@@ -152,20 +219,21 @@ inline void GBCPU::CP(byte & reg, byte arg)
     // Set N falg
     SUBTRACT_FLAG = true;
 
+    byte result = reg - arg; // A - n
+
     // Detect half carry
-    if (((reg - arg) & 0x0F) >= (reg & 0xF))
+    if ((result & 0x0F) > (reg & 0x0F))
         HALF_CARRY_FLAG = true;
     else
         HALF_CARRY_FLAG = false;
 
-    // Detect carry
-    if (((reg - arg) & 0xFF) > (reg & 0xFF))
+    if ((result & 0xFF) > (reg & 0xFF))
         CARRY_FLAG = true;
     else
         CARRY_FLAG = false;
 
     // Detect zero
-    (((reg - arg) & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
+    ((result & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
 inline void GBCPU::INCR(byte & reg)
@@ -223,42 +291,57 @@ inline void GBCPU::DAA()
     // Adjust the binary decimal digits if we have a N and C or H flag
     if (SUBTRACT_FLAG == true)
     {
-        if (HALF_CARRY_FLAG == true)
-            temp = (temp - 6) & 0xFF;
+       // Adjust lower nibble if we have a half-carry
+        if (((temp & 0x0F) > 0x09) || (HALF_CARRY_FLAG == true))
+        {
+            temp = (temp - 0x06) & 0xFF;
 
-        if (CARRY_FLAG == true)
+            // Set Carry Flag after adjustment
+            if ((temp & 0xF0) == 0xF0)
+                CARRY_FLAG = true;
+            else
+                CARRY_FLAG = false;
+        }
+        
+        // Adjust higher nibble if we have a carry
+        if (((temp & 0xF0) > 0x90) || (CARRY_FLAG == true))
             temp -= 0x60;
     }
     else
     {
-        if ((temp & 0xF)>9 || (HALF_CARRY_FLAG == true))
-            temp += 6;
+        // Adjust lower nibble if we have a half-carry
+        if (((temp & 0x0F) > 0x09) || (HALF_CARRY_FLAG == true))
+        {
+            temp = (temp + 0x06) & 0xFF;
 
-        if ((temp & 0xFFF)>0x9F || (CARRY_FLAG == true))
+            // Set Carry Flag after adjustment
+            if ((temp & 0xF0) == 0x00)
+                CARRY_FLAG = true;
+            else
+                CARRY_FLAG = false;
+        }
+
+        // Adjust higher nibble if we have a carry
+        if (((temp & 0xF0) > 0x90) || (CARRY_FLAG == true))
             temp += 0x60;
     }
 
     A = temp;
 
-    // Set Carry 
-    if ((temp & 0x100) == 0x100)
-        CARRY_FLAG = true;
-    else
-        CARRY_FLAG = false;
-
     // Detect Zero
     ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 
-    // Clear Half-Carry
-    CARRY_FLAG = false;
+    // Clear Half-Carry (C1275DBA)
+    //HALF_CARRY_FLAG = false;
 }
 
 // Rotate A left
 inline void GBCPU::RLCA()
 {
-    // Reset N and H flag
+    // Reset N, H, and Z flag
     SUBTRACT_FLAG = false;
     HALF_CARRY_FLAG = false;
+    ZERO_FLAG = false;
 
     // If MSB is high, set carry flag
     if ((A & 0x80) >> 7)
@@ -271,9 +354,6 @@ inline void GBCPU::RLCA()
         CARRY_FLAG = false;
         A = ((A << 1) & 0xFE);
     }
-
-    // Detect zero
-    ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
 // Rotate n left
@@ -302,10 +382,10 @@ inline void GBCPU::RLC(byte & reg)
 // Rotate A left with carry
 inline void GBCPU::RLA()
 {
-    // Reset N and H flag
+    // Reset N, H, and Z flag
     SUBTRACT_FLAG = false;
     HALF_CARRY_FLAG = false;
-
+    ZERO_FLAG = false;
 
     // If MSB is high, set carry flag and add the previous carry flag bit to LSB
     if ((A & 0x80) >> 7)
@@ -320,9 +400,6 @@ inline void GBCPU::RLA()
         A |= (CARRY_FLAG == true ? 0x01 : 0x00);
         CARRY_FLAG = false;
     }
-
-    // Detect zero
-    ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
 // Rotate n left with carry
@@ -354,9 +431,10 @@ inline void GBCPU::RL(byte & reg)
 // Rotate A right
 inline void GBCPU::RRCA()
 {
-    // Reset N and H flag
+    // Reset N, H, and Z flag
     SUBTRACT_FLAG = false;
     HALF_CARRY_FLAG = false;
+    ZERO_FLAG = false;
 
     // If LSB is high, set carry flag
     if ((A & 0x01))
@@ -369,9 +447,6 @@ inline void GBCPU::RRCA()
         CARRY_FLAG = false;
         A = ((A >> 1) & 0x7F);
     }
-
-    // Detect zero
-    ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
 // Rotate n right
@@ -400,7 +475,7 @@ inline void GBCPU::RRC(byte & reg)
 // Rotate A right through carry
 inline void GBCPU::RRA()
 {
-    // Reset N and H flag
+    // Reset N, H, and Z flag
     SUBTRACT_FLAG = false;
     HALF_CARRY_FLAG = false;
     ZERO_FLAG = false;
@@ -418,9 +493,6 @@ inline void GBCPU::RRA()
         A |= ((CARRY_FLAG == true ? 0x01 : 0x00) << 7);
         CARRY_FLAG = false;
     }
-
-    // Detect zero
-    //((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
 // Rotate n right through carry
@@ -429,7 +501,6 @@ inline void GBCPU::RR(byte & reg)
     // Reset N and H flag
     SUBTRACT_FLAG = false;
     HALF_CARRY_FLAG = false;
-    ZERO_FLAG = false;
 
     // If LSB is high, set carry flag
     if ((reg & 0x01))
@@ -446,7 +517,7 @@ inline void GBCPU::RR(byte & reg)
     }
 
     // Detect zero
-    //((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
+    ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
 // SLA n
@@ -479,16 +550,16 @@ inline void GBCPU::SRA(byte & reg)
     SUBTRACT_FLAG = false;
     HALF_CARRY_FLAG = false;
 
-    // Set Carry flag if the lsb is high
+    // Set Carry flag if the lsb is high, while maintaining the previous value of the msb
     if ((reg & 0x01))
     {
         CARRY_FLAG = true;
-        reg = (reg & 0xFF) >> 1;
+        reg = ((reg & 0xFF) >> 1 | (reg & 0x80));
     }
     else
     {
         CARRY_FLAG = false;
-        reg = (reg & 0xFF) >> 1;
+        reg = ((reg & 0xFF) >> 1 | (reg & 0x80));
     }
 
     // Detect zero
@@ -511,7 +582,6 @@ inline void GBCPU::SRL(byte & reg)
     {
         CARRY_FLAG = false;
     }
-
 
     reg = (reg & 0xFF) >> 1;
 
@@ -553,11 +623,14 @@ inline void GBCPU::JR()
 // CALL cc
 inline void GBCPU::CALL()
 {
-    // Push the address of the next instruction (PC + 1) onto the stack
+    // Push the address of the next instruction (PC + 3) onto the stack
     PUSH(((PC + 3) >> 8), ((PC + 3) & 0x00FF));
 
     // Get the immediate instruction
     PC = readImmWord();
+
+    // cout << "Calling to: " << PC << " or ";
+    // printf("%X!\n", PC);
 }
 
 // RESET
@@ -577,7 +650,7 @@ inline void GBCPU::RET()
     byte lsb;
     byte msb;
 
-    // Push the address of the next instruction onto the stack
+    // Pop the address of the next instruction from the stack
     POP(msb, lsb);
 
     PC = CASTWD(msb, lsb);
@@ -589,7 +662,7 @@ CPU Opcode Execution Instruction Macros
 
 // TODO: CHECK TO SEE IF ALL WORD LOADS GET THE LSB FIRST
 // TODO: Add comments for each opcode about what the instruction does
-void GBCPU::OP00() { /*cout << "NOP" << endl;*/ ++PC; cycles = 4; }                 // NOP
+void GBCPU::OP00() { /*cout << "NOP" << endl;*/ ++PC; cycles = 4; }             // NOP
 void GBCPU::OP01() { SetBC( readImmWord() ); PC += 3; cycles = 12; }            // LD BC, ##
 void GBCPU::OP02() { writeByte(A, GetBC()); ++PC; cycles = 8; }                 // LD (BC), A
 void GBCPU::OP03() { word temp = GetBC() + 1; SetBC(temp); ++PC; cycles = 8; }  // INC BC
@@ -648,7 +721,7 @@ void GBCPU::OP33() { ++SP; ++PC; cycles = 8; }                                  
 void GBCPU::OP34() { byte t = readByte(GetHL()); INCR(t); writeByte(t, GetHL()); ++PC; cycles = 12; }            // INC (HL)
 void GBCPU::OP35() { byte t = readByte(GetHL()); DECR(t); writeByte(t, GetHL()); ++PC; cycles = 12; }            // DEC (HL)
 void GBCPU::OP36() { writeByte(readImmByte(), GetHL()); PC += 2; cycles = 12; }                                  // LD (HL), #
-void GBCPU::OP37() { HALF_CARRY_FLAG = true; SUBTRACT_FLAG = false; HALF_CARRY_FLAG = false; ++PC; cycles = 4; } // SCF
+void GBCPU::OP37() { CARRY_FLAG = true; SUBTRACT_FLAG = false; HALF_CARRY_FLAG = false; ++PC; cycles = 4; }      // SCF
 void GBCPU::OP38() { if (CARRY_FLAG == true) JR(); else PC += 2; cycles = 8; }                                   // JR, c
 void GBCPU::OP39() { ADD(SP); ++PC; cycles = 8; }                                                                // ADD HL, SP 
 void GBCPU::OP3A() { A = readByte(GetHL()); DEC(H, L); ++PC; cycles = 8; }                                       // LD A, (HL--)
@@ -728,39 +801,39 @@ void GBCPU::OP7D() { A = L; ++PC; cycles = 4; }                               //
 void GBCPU::OP7E() { A = readByte(GetHL()); ++PC; cycles = 8; }               // LD A, (HL)
 void GBCPU::OP7F() { A = A; ++PC; cycles = 4; }                               // LD A, A
 
-void GBCPU::OP80() { ADD(A, B); ++PC; cycles = 4; }                                                 // ADD B
-void GBCPU::OP81() { ADD(A, C); ++PC; cycles = 4; }                                                 // ADD C
-void GBCPU::OP82() { ADD(A, D); ++PC; cycles = 4; }                                                 // ADD D
-void GBCPU::OP83() { ADD(A, E); ++PC; cycles = 4; }                                                 // ADD E
-void GBCPU::OP84() { ADD(A, H); ++PC; cycles = 4; }                                                 // ADD H
-void GBCPU::OP85() { ADD(A, L); ++PC; cycles = 4; }                                                 // ADD L
-void GBCPU::OP86() { ADD(A, readByte(GetHL())); ++PC; cycles = 8; }                                 // ADD (HL)
-void GBCPU::OP87() { ADD(A, A); ++PC; cycles = 4; }                                                 // ADD A
-void GBCPU::OP88() { ADD(A, B + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // ADC B
-void GBCPU::OP89() { ADD(A, C + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // ADC C
-void GBCPU::OP8A() { ADD(A, D + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // ADC D
-void GBCPU::OP8B() { ADD(A, E + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // ADC E
-void GBCPU::OP8C() { ADD(A, H + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // ADC H
-void GBCPU::OP8D() { ADD(A, L + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // ADC L
-void GBCPU::OP8E() { ADD(A, readByte(GetHL()) + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 8; } // ADC (HL)
-void GBCPU::OP8F() { ADD(A, A + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // ADC A
+void GBCPU::OP80() { ADD(A, B); ++PC; cycles = 4; }                 // ADD B
+void GBCPU::OP81() { ADD(A, C); ++PC; cycles = 4; }                 // ADD C
+void GBCPU::OP82() { ADD(A, D); ++PC; cycles = 4; }                 // ADD D
+void GBCPU::OP83() { ADD(A, E); ++PC; cycles = 4; }                 // ADD E
+void GBCPU::OP84() { ADD(A, H); ++PC; cycles = 4; }                 // ADD H
+void GBCPU::OP85() { ADD(A, L); ++PC; cycles = 4; }                 // ADD L
+void GBCPU::OP86() { ADD(A, readByte(GetHL())); ++PC; cycles = 8; } // ADD (HL)
+void GBCPU::OP87() { ADD(A, A); ++PC; cycles = 4; }                 // ADD A
+void GBCPU::OP88() { ADDC(B); ++PC; cycles = 4; }                   // ADC B
+void GBCPU::OP89() { ADDC(C); ++PC; cycles = 4; }                   // ADC C
+void GBCPU::OP8A() { ADDC(D); ++PC; cycles = 4; }                   // ADC D
+void GBCPU::OP8B() { ADDC(E); ++PC; cycles = 4; }                   // ADC E
+void GBCPU::OP8C() { ADDC(H); ++PC; cycles = 4; }                   // ADC H
+void GBCPU::OP8D() { ADDC(L); ++PC; cycles = 4; }                   // ADC L
+void GBCPU::OP8E() { ADDC(readByte(GetHL())); ++PC; cycles = 8; }   // ADC (HL)
+void GBCPU::OP8F() { ADDC(A); ++PC; cycles = 4; }                   // ADC A
 
-void GBCPU::OP90() { SUB(A, B); ++PC; cycles = 4; }                                                 // SUB B
-void GBCPU::OP91() { SUB(A, C); ++PC; cycles = 4; }                                                 // SUB C
-void GBCPU::OP92() { SUB(A, D); ++PC; cycles = 4; }                                                 // SUB D
-void GBCPU::OP93() { SUB(A, E); ++PC; cycles = 4; }                                                 // SUB E
-void GBCPU::OP94() { SUB(A, H); ++PC; cycles = 4; }                                                 // SUB H
-void GBCPU::OP95() { SUB(A, L); ++PC; cycles = 4; }                                                 // SUB L
-void GBCPU::OP96() { SUB(A, readByte(GetHL())); ++PC; cycles = 8; }                                 // SUB (HL)
-void GBCPU::OP97() { SUB(A, A); ++PC; cycles = 4; }                                                 // SUB A
-void GBCPU::OP98() { SUB(A, B + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // SBC B
-void GBCPU::OP99() { SUB(A, C + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // SBC C
-void GBCPU::OP9A() { SUB(A, D + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // SBC D
-void GBCPU::OP9B() { SUB(A, E + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // SBC E
-void GBCPU::OP9C() { SUB(A, H + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // SBC H
-void GBCPU::OP9D() { SUB(A, L + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // SBC L
-void GBCPU::OP9E() { SUB(A, readByte(GetHL()) + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 8; } // SBC (HL)
-void GBCPU::OP9F() { SUB(A, A + (CARRY_FLAG == true ? 0x01 : 0x00)); ++PC; cycles = 4; }            // SBC A
+void GBCPU::OP90() { SUB(A, B); ++PC; cycles = 4; }                 // SUB B
+void GBCPU::OP91() { SUB(A, C); ++PC; cycles = 4; }                 // SUB C
+void GBCPU::OP92() { SUB(A, D); ++PC; cycles = 4; }                 // SUB D
+void GBCPU::OP93() { SUB(A, E); ++PC; cycles = 4; }                 // SUB E
+void GBCPU::OP94() { SUB(A, H); ++PC; cycles = 4; }                 // SUB H
+void GBCPU::OP95() { SUB(A, L); ++PC; cycles = 4; }                 // SUB L
+void GBCPU::OP96() { SUB(A, readByte(GetHL())); ++PC; cycles = 8; } // SUB (HL)
+void GBCPU::OP97() { SUB(A, A); ++PC; cycles = 4; }                 // SUB A
+void GBCPU::OP98() { SUBC(B); ++PC; cycles = 4; }                   // SBC B
+void GBCPU::OP99() { SUBC(C); ++PC; cycles = 4; }                   // SBC C
+void GBCPU::OP9A() { SUBC(D); ++PC; cycles = 4; }                   // SBC D
+void GBCPU::OP9B() { SUBC(E); ++PC; cycles = 4; }                   // SBC E
+void GBCPU::OP9C() { SUBC(H); ++PC; cycles = 4; }                   // SBC H
+void GBCPU::OP9D() { SUBC(L); ++PC; cycles = 4; }                   // SBC L
+void GBCPU::OP9E() { SUBC(readByte(GetHL())); ++PC; cycles = 8; }   // SBC (HL)
+void GBCPU::OP9F() { SUBC(A); ++PC; cycles = 4; }                   // SBC A
 
 void GBCPU::OPA0() { AND(A, B); ++PC; cycles = 4; }            // AND, B 
 void GBCPU::OPA1() { AND(A, C); ++PC; cycles = 4; }            // AND, C 
@@ -769,7 +842,7 @@ void GBCPU::OPA3() { AND(A, E); ++PC; cycles = 4; }            // AND, E
 void GBCPU::OPA4() { AND(A, H); ++PC; cycles = 4; }            // AND, H 
 void GBCPU::OPA5() { AND(A, L); ++PC; cycles = 4; }            // AND, L
 void GBCPU::OPA6() { AND(A, readByte(GetHL())); ++PC; cycles = 8; } // AND, (HL)
-void GBCPU::OPA7() { AND(A, B); ++PC; cycles = 4; }            // AND, A
+void GBCPU::OPA7() { AND(A, A); ++PC; cycles = 4; }            // AND, A
 void GBCPU::OPA8() { XOR(A, B); ++PC; cycles = 4; }            // XOR, B 
 void GBCPU::OPA9() { XOR(A, C); ++PC; cycles = 4; }            // XOR, C 
 void GBCPU::OPAA() { XOR(A, D); ++PC; cycles = 4; }            // XOR, D 
@@ -797,11 +870,15 @@ void GBCPU::OPBE() { CP(A, readByte(GetHL())); ++PC; cycles = 8; } // CP, (HL)
 void GBCPU::OPBF() { CP(A, A); ++PC; cycles = 4; }            // CP, A
 
 void GBCPU::OPC0() { if (ZERO_FLAG == false) RET(); else ++PC; cycles = 8; }
-void GBCPU::OPC1() { POP(B, C); ++PC; cycles = 12; }
+void GBCPU::OPC1() { //SetBC(readWord(SP+1)); SP += 2;
+                     POP(B, C); 
+                     ++PC; cycles = 12; }
 void GBCPU::OPC2() { if (ZERO_FLAG == false) JP(); else PC += 3; cycles = 12; }
 void GBCPU::OPC3() { JP(); cycles = 12; }
 void GBCPU::OPC4() { if (ZERO_FLAG == false) CALL(); else PC += 3; cycles = 12; }
-void GBCPU::OPC5() { PUSH(B, C); ++PC; cycles = 16; }
+void GBCPU::OPC5() { //SP -= 2; writeWord(GetBC(), SP);
+                     PUSH(B, C); 
+                     ++PC; cycles = 16; }
 void GBCPU::OPC6() { ADD(A, readImmByte() ); PC += 2;  cycles = 8; }
 void GBCPU::OPC7() { RST(0x00); cycles = 32; }
 void GBCPU::OPC8() { if (ZERO_FLAG == true) RET(); else ++PC; cycles = 8; }
@@ -810,15 +887,19 @@ void GBCPU::OPCA() { if (ZERO_FLAG == true) JP(); else PC += 3; cycles = 12; }
 void GBCPU::OPCB() { (this->*(CBopcodes)[MEM[PC+1]])(); /*cout << "CB Opcode called!" << endl;*/ /* PREFIX CB OPCODES - DO NOT USE. */ }
 void GBCPU::OPCC() { if (ZERO_FLAG == true) CALL(); else PC += 3; cycles = 12; }
 void GBCPU::OPCD() { CALL(); cycles = 12; } // CALL nn
-void GBCPU::OPCE() { ADD(A, readImmByte() + (CARRY_FLAG == true)); PC += 2; cycles = 8; }
+void GBCPU::OPCE() { ADDC(readImmByte()); PC += 2; cycles = 8; }
 void GBCPU::OPCF() { RST(0x08); cycles = 32; }
 
 void GBCPU::OPD0() { if (CARRY_FLAG == false) RET(); else ++PC; cycles = 8; }
-void GBCPU::OPD1() { POP(D, E); ++PC; cycles = 12; }
+void GBCPU::OPD1() { //SetDE(readWord(SP+1)); SP += 2;
+                     POP(D, E); 
+                     ++PC; cycles = 12; }
 void GBCPU::OPD2() { if (CARRY_FLAG == false) JP(); else PC += 3; cycles = 12; }
 void GBCPU::OPD3() { cout << "ILLEGAL OPCODE CALLED!" << endl; /* DO NOTHING - BLANK OPCODE */ }
 void GBCPU::OPD4() { if (CARRY_FLAG == false) CALL(); else PC += 3; cycles = 12; }
-void GBCPU::OPD5() { PUSH(D, E); ++PC; cycles = 16; }
+void GBCPU::OPD5() { //SP -= 2; writeWord(GetDE(), SP); 
+                     PUSH(D, E); 
+                     ++PC; cycles = 16; }
 void GBCPU::OPD6() { SUB(A, readImmByte() ); PC += 2; cycles = 8; }
 void GBCPU::OPD7() { RST(0x10); cycles = 32; }
 void GBCPU::OPD8() { if (CARRY_FLAG == true) RET(); else ++PC; cycles = 8; }
@@ -827,15 +908,19 @@ void GBCPU::OPDA() { if (CARRY_FLAG == true) JP(); else PC += 3; cycles = 12; }
 void GBCPU::OPDB() { cout << "ILLEGAL OPCODE CALLED!" << endl; /* DO NOTHING - BLANK OPCODE */ }
 void GBCPU::OPDC() { if (CARRY_FLAG == true) CALL(); else PC += 3; cycles = 12; }
 void GBCPU::OPDD() { cout << "ILLEGAL OPCODE CALLED!" << endl; /* DO NOTHING - BLANK OPCODE */ }
-void GBCPU::OPDE() { SUB(A, readImmByte() + (CARRY_FLAG == true)); PC += 2; cycles = 8; }
+void GBCPU::OPDE() { SUBC(readImmByte()); PC += 2; cycles = 8; }
 void GBCPU::OPDF() { RST(0x18); cycles = 32; }
 
 void GBCPU::OPE0() { /*printf("Loading A into address %X!\n", 0xFF00 + readImmByte());*/ writeByte(A, 0xFF00 + readImmByte()); PC += 2; cycles = 12; } // LD ($FF00 + #), A
-void GBCPU::OPE1() { POP(H, L); ++PC; cycles = 12; }
+void GBCPU::OPE1() { //SetHL(readWord(SP+1)); SP += 2;
+                     POP(H, L);
+                     ++PC; cycles = 12; }
 void GBCPU::OPE2() { /*printf("Loading A into address %X!\n", 0xFF00 + C); */ writeByte(A, 0xFF00 + C); ++PC; cycles = 8; } // LD ($FF00 + C), A
 void GBCPU::OPE3() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
 void GBCPU::OPE4() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
-void GBCPU::OPE5() { PUSH(H, L); ++PC; cycles = 16; }
+void GBCPU::OPE5() { //SP -= 2; writeWord(GetHL(), SP); 
+                     PUSH(H, L); 
+                     ++PC; cycles = 16; }
 void GBCPU::OPE6() { AND(A, readImmByte() ); PC += 2;  cycles = 8; }
 void GBCPU::OPE7() { RST(0x20); cycles = 32; }
 void GBCPU::OPE8() { ADDSP(); PC += 2; cycles = 16; }
@@ -848,17 +933,22 @@ void GBCPU::OPEE() { XOR( A, readImmByte() ); PC += 2; cycles = 8; }
 void GBCPU::OPEF() { RST(0x28); cycles = 32; }
 
 void GBCPU::OPF0() { /*printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + readImmByte()], 0xFF00 + readImmByte());*/ A = readByte(0xFF00 + readImmByte()); PC += 2; cycles = 12; } // LD A, ($FF00 + #)
-void GBCPU::OPF1() { byte temp = 0x00; POP(A, temp); SetF(temp); ++PC; cycles = 12; }
+void GBCPU::OPF1() { //SetAF(readWord(SP+1)); SP += 2;
+                     byte temp = 0x00; POP(A, temp); SetF(temp); 
+                     ++PC; cycles = 12; }
 void GBCPU::OPF2() { /*printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + C], 0xF00 + C);*/ A = readByte(0xFF00 + C); ++PC; cycles = 8; } // LD A, ($FF00 + C)
 void GBCPU::OPF3() { IME = false; ++PC; cycles = 4; }                     // DI
 void GBCPU::OPF4() { cout << "ILLEGAL OPCODE CALLED!" << endl; }
-void GBCPU::OPF5() { PUSH(A, GetF()); ++PC; cycles = 16; }
+void GBCPU::OPF5() { //SP -= 2; writeWord(GetAF(), SP); 
+                     PUSH(A, GetF()); 
+                     ++PC; cycles = 16; }
 void GBCPU::OPF6() { OR(A, readImmByte() ); PC += 2;  cycles = 8; }
 void GBCPU::OPF7() { RST(0x30); cycles = 32; }
-void GBCPU::OPF8() { SetHL( word(SP + (signed_byte)readImmByte()) ); PC += 2; cycles = 12; SUBTRACT_FLAG = false; ZERO_FLAG = false; 
+void GBCPU::OPF8() { SetHL( word(SP + (signed_byte)readImmByte()) ); SUBTRACT_FLAG = false; ZERO_FLAG = false; 
                      // Detect half carry and carry
-                     ((SP & 0x0F) +  ((signed_byte)readImmByte() & 0x0F)) ? HALF_CARRY_FLAG = true : HALF_CARRY_FLAG = false;
-                     ((SP & 0x0FF) + ((signed_byte)readImmByte() & 0xFF)) ? CARRY_FLAG = true : CARRY_FLAG = false; }                      // LD HL SP, n
+                     (((SP & 0x0F) +  ((signed_byte)readImmByte() & 0x0F)) & 0x10)  ? HALF_CARRY_FLAG = true : HALF_CARRY_FLAG = false;
+                     (((SP & 0x0FF) + ((signed_byte)readImmByte() & 0xFF)) & 0x100) ? CARRY_FLAG = true : CARRY_FLAG = false; 
+                     PC += 2; cycles = 12; }                                                                                               // LD HL SP, n
 void GBCPU::OPF9() { SP = GetHL(); ++PC; cycles = 8; }                                                                                     // LD SP, HL
 void GBCPU::OPFA() { A = readByte(readImmWord()); PC += 3; cycles = 16; } // LD A, (##)
 void GBCPU::OPFB() { IME = true; ++PC; cycles = 4; }                      // EI
@@ -1013,7 +1103,7 @@ void GBCPU::CBOP83() { CLRBIT(E, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOP84() { CLRBIT(H, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOP85() { CLRBIT(L, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOP86() { byte temp = readByte(GetHL()); CLRBIT(temp, 0); writeByte(temp, GetHL());  PC += 2; cycles = 8; }
-void GBCPU::CBOP87() { CLRBIT(A, 1); PC += 2; cycles = 8; }
+void GBCPU::CBOP87() { CLRBIT(A, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOP88() { CLRBIT(B, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOP89() { CLRBIT(C, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOP8A() { CLRBIT(D, 1); PC += 2; cycles = 8; }
@@ -1081,7 +1171,7 @@ void GBCPU::CBOPC3() { SETBIT(E, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOPC4() { SETBIT(H, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOPC5() { SETBIT(L, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOPC6() { byte temp = readByte(GetHL());  SETBIT(temp, 0); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
-void GBCPU::CBOPC7() { SETBIT(A, 1); PC += 2; cycles = 8; }
+void GBCPU::CBOPC7() { SETBIT(A, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOPC8() { SETBIT(B, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOPC9() { SETBIT(C, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOPCA() { SETBIT(D, 1); PC += 2; cycles = 8; }

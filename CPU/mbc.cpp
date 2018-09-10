@@ -106,7 +106,7 @@ void GBCPU::MBC1write(word addr, byte data)
     // Write data from ECHO_WRAM to WRAM as well
     else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_END)
     {
-        MEM[addr] = data;
+        //MEM[addr] = data;
         MEM[addr - (WRAM_ECHO_START - WRAM_START)] = data;         
     }
 
@@ -134,7 +134,7 @@ void GBCPU::MBC1write(word addr, byte data)
         MEM[addr] = data;
     }
 
-    // Sprite DMA Trasnfer
+    // Sprite DMA Transfer
     else if (addr == PPU_DMA)
         PerformDMATransfer(data);
 

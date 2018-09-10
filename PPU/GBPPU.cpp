@@ -425,33 +425,33 @@ void TestVideoRAM(GBCPU & CPU)
 {
     int i = 0x8800;
     // file tile data with all As
-    //CPU.MEM[i++] = 0x7C;
-    //CPU.MEM[i++] = 0x7C;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0xFE;
-    //CPU.MEM[i++] = 0xFE;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0xC6;
-    //CPU.MEM[i++] = 0x00;
-    //CPU.MEM[i++] = 0x00;
+    CPU.MEM[i++] = 0x7C;
+    CPU.MEM[i++] = 0x7C;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0xFE;
+    CPU.MEM[i++] = 0xFE;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0xC6;
+    CPU.MEM[i++] = 0x00;
+    CPU.MEM[i++] = 0x00;
 
 
-    //for (int i = 0x9C00; i < 0x9FFF; ++i)
-    //{
+    for (int i = 0x9C00; i < 0x9FFF; ++i)
+    {
         // file tile #s with all As (tile #0)
-    //    CPU.MEM[i] = (signed_byte)-128;
-    //}
+        CPU.MEM[i] = (signed_byte)-128;
+    }
 
     // trim off half of top left corner
-    //CPU.writeByte(4, PPU_SCROLLY);
-    //CPU.writeByte(4, PPU_SCROLLX);
+    CPU.writeByte(4, PPU_SCROLLY);
+    CPU.writeByte(4, PPU_SCROLLX);
 
     for (int i = 0; i < 145; ++i)
     {

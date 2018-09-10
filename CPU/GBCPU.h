@@ -23,10 +23,11 @@ public:
 	word PC;					// Program Counter
 	byte A;						// Accumulator Register
 
-    bool CARRY_FLAG,            // Status Register (F)
-         HALF_CARRY_FLAG,
-         SUBTRACT_FLAG,
-         ZERO_FLAG;
+    // Status Register (F)
+    bool CARRY_FLAG;            // (C) Carry Flag      - 0x10 (Bit 4)
+    bool HALF_CARRY_FLAG;       // (H) Half-Carry Flag - 0x20 (Bit 5)
+    bool SUBTRACT_FLAG;         // (N) Subtact Flag    - 0x40 (Bit 6)
+    bool ZERO_FLAG;             // (Z) Zero Flag       - 0x80 (Bit 7)
 
 	byte B, C, 					// General Purpose Registers
 		 D, E,					// These may be paired to form 16-bit registers
@@ -82,6 +83,7 @@ public:
     /***** Opcode Functions - opcodes.cpp *****/
     // ADD A, n
     inline void ADD(byte & reg, byte arg);
+    inline void ADDC(byte arg);
 
     // ADD HL, n
     inline void ADD(word arg);
@@ -90,6 +92,8 @@ public:
     inline void ADDSP();
 
     inline void SUB(byte & reg, byte arg);
+    inline void SUBC(byte arg);
+
     inline void AND(byte & reg, byte arg);
     inline void OR(byte & reg, byte arg);
     inline void XOR(byte & reg, byte arg);
