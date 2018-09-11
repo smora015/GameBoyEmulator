@@ -14,7 +14,11 @@ A simple Game Boy emulator implemented from scratch in C++ using Simple DirectMe
 
 ## Progress
 
-Although I have not seen progress on starting up any real games, most CPU opcodes have been verified through Blargg's trusty  test ROMs:
+Currently able to load intro screens on ROM_ONLY MBC1 type ROMs such as Tetris:
+
+![Tetris Intro Loaded!](http://sergiomorales.me/assets/images/gb/tetris_intro.PNG)
+
+Most CPU opcodes have been verified through Blargg's trusty  test ROMs:
 
 ![Blargg's cpu_instrs.gb test rom](http://sergiomorales.me/assets/images/gb/cpu_instrs.png)
 ![Blargg's 01-special.gb test rom](http://sergiomorales.me/assets/images/gb/01-special.png)
