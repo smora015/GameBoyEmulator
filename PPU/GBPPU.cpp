@@ -18,6 +18,11 @@ unsigned short scanline_counter = 0;
 
 void ExecutePPU(byte cycles, GBCPU & CPU)
 {
+    /* TODO: Optimize ExecutePPU
+             1) Create macros from cycles per scanline and register masks
+             2) 
+
+             */
     // We render 60 frames per second, therefore we need 4.194304 Mhz / 60 / 153 = 456 cycles per scaneline
     
     // Check and Update the status of the LCD through the LCD STAT register
@@ -55,7 +60,7 @@ void ExecutePPU(byte cycles, GBCPU & CPU)
 
         // We increment scanlines in each if branch because incrementing it here was skipping scanline 0 
         // Reset scanline cycles counter
-        scanline_counter = 0;
+        scanline_counter -= 456;
     }
 
 

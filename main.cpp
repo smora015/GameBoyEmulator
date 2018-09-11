@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     SDL_Window *window;
     
     SDL_Init(SDL_INIT_EVERYTHING);
-    SDL_CreateWindowAndRenderer(160, 144, 0, &window, &renderer);
+    SDL_CreateWindowAndRenderer(160*3, 144*3, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE, &window, &renderer);
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, 160, 144); // NOTE: RGBA format needs Alpha as first element, not last!
 
     // Clear screen with White
@@ -43,11 +43,18 @@ int main(int argc, char **argv)
     SDL_RenderClear(renderer);
 
     // Load ROM data and initialize CPU/PPU
-    string default_rom = "BIOS.gb"; //"01-special.gb";//"02-interrupts.gb";//"cpu_instrs.gb"; // "Tetris (World).gb"; 
+    string default_rom = "01 - special.gb"; //"Tetris (World).gb"; //BIOS.gb"; //;//"02-interrupts.gb";//"cpu_instrs.gb"; // ; 
     GBCPU CPU = GBCPU();
 
     load_rom(argc < 2 ? default_rom : string(argv[1]), CPU);
     CPU.init();
+
+    // After loading ROM, set the window title to be the name of the game
+    //char window_name[40] = { "GameBoy Emulator: "  };
+    //strcat(window_name, rom_name);
+    //SDL_SetWindowTitle(window, window_name);
+    //SDL_SetWindowTitle(window, rom_name);
+    SDL_SetWindowTitle(window, "Gameboy Emulator");
 
     // Capture Intro screen from ROM $104-133
     getIntroScreen(CPU);
@@ -61,6 +68,9 @@ int main(int argc, char **argv)
 	// This flag captures the user clicking 'X' in order to elegantly quit the program
     bool quit = false;
 
+
+    // DEBUG: Max executions
+    int counter_max = strtol((argc < 3 ? "200000" : argv[2]), NULL, 10);
 
 	// Main execution loop
 	while (1)
@@ -93,19 +103,12 @@ int main(int argc, char **argv)
             cycles_in_frame += cycles;
 
             // Quit if X has been clicked
-            if ((SDL_PollEvent(&event) && event.type == SDL_QUIT))// || counter > 250000)
+            if ((SDL_PollEvent(&event) && event.type == SDL_QUIT))// || counter > counter_max)
             {
                 quit = true;
                 break;
             }
         }
-
-		// Quit if X has been clicked
-		if ((SDL_PollEvent(&event) && event.type == SDL_QUIT))// || counter > 250000)
-		{
-			quit = true;
-			break;
-		}
 
         // Check again to quit outside of main game loop to avoid lag
         if (quit)

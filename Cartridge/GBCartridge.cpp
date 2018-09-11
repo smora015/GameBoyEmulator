@@ -17,7 +17,39 @@ size_t ram_size;        // Actual RAM size in bytes
 size_t ext_rom_size;    // Size of external ROM in bytes
 size_t ext_ram_size;    // Size of external RAM in bytes
 MBC_TYPES rom_mbc_type; // The MBC cartridge typebc_type;
+char rom_name[17];        // The 16-byte name specified in the cartridge from $134-143
 
+/* Function:    load_boot_rom(void)
+   Description: After loading specified rom, this function
+                will load the contents of the bootstrap rom in order
+                to prepare the CPU to run the game. */
+/*void load_boot_rom(GBCPU & cpu)
+{
+    char c = 0x00;
+
+    // Load file
+    ifstream file("BIOS.gb", std::ios_base::binary);
+
+    if (file.good() != true)
+        exit(0x01);
+
+    // Store all 256 bytes of data and set it to the CPU internal ROM space
+    for (int i = 0; i <= 256; ++i)
+    {
+        // Get next byte
+        file.get(c);
+
+        // Populate CPU Memory with data
+        cpu.MEM[i] = c;
+    }
+
+}*/
+
+/* Function:    load_rom(string rom_name, GBCPU & cpu)
+   Description: After loading specified rom, this function
+                will load the contents into the CPU ROM space
+                and configure the cartridge type based on the
+                configuration bits. */
 void load_rom(string rom_name, GBCPU & cpu)
 {
     // Initialize temp variables for reading data
@@ -28,6 +60,11 @@ void load_rom(string rom_name, GBCPU & cpu)
     // @TODO: check for invalid files
     cout << "Loading file: " << rom_name << "..." << endl << endl;
     ifstream file(rom_name, std::ios_base::binary);
+
+    // Quit game if specified ROM is not found
+    /*if (file.good() != true)
+        exit(0x01);*/
+
 
     // Get ROM bank #0 - $0000 - $3FFF
     for (int i = 0; i <= ROM_END; ++i)
@@ -47,8 +84,8 @@ void load_rom(string rom_name, GBCPU & cpu)
     // Calculate sizes of switchable memory to allocate memory properly
     initialize_rom_ram_size();
 
-    // Get second ROM bank if only 2 banks exist
-    if (ext_rom_size == 0)
+    // Get second ROM bank for ROM_ONLY types
+    if ((rom_size > 0x4000) & (ext_rom_size == 0))
     {
         for (int i = 0; i <= (EXTERNAL_ROM_END - 0x4000); ++i)
         {
@@ -60,18 +97,21 @@ void load_rom(string rom_name, GBCPU & cpu)
             ++num_of_bytes;
         }
     }
-    // Otherwise get all ROM banks if more than 2 exist
-    else
-    {
-        for (unsigned int i = 0; i < ext_rom_size; ++i)
-        {
-            // Get next byte
-            file.get(c);
 
-            // Populate external rom with data
-            ext_rom[i] = c;
-            ++num_of_bytes;
-        }
+    // Copy all external ROM banks if it exists
+    for (unsigned int i = 0; i < ext_rom_size; ++i)
+    {
+        // Get next byte
+        file.get(c);
+
+        // Populate external rom with data
+        ext_rom[i] = c;
+
+        // Copy first bank to switchable ROM for temporarily
+        if (i < 0x4000)
+            cpu.MEM[i + 0x4000] = ext_rom[i];
+
+        ++num_of_bytes;
     }
 
     file.close();
@@ -80,8 +120,22 @@ void load_rom(string rom_name, GBCPU & cpu)
 
 void extract_header(GBCPU & cpu)
 {
+    int i = 0;
     cout << "Extracting cartridge header information..." << endl;
 
+    /*
+    // Determine name
+    while ((i < 16) || (cpu.MEM[0x0134 + i] == 0x00))
+    {
+        rom_name[i] = cpu.MEM[0x0134 + i];
+        printf("Adding %X at index %i \n", cpu.MEM[0x0134 + i], i);
+        ++i;
+    }
+
+    rom_name[i] = '\0';
+
+    cout << "Cartridge name: \n" << rom_name << endl;
+    */
     // Determine cartridge type
     cout << "Cartridge type: ";
     switch (cpu.MEM[0x147])
@@ -342,8 +396,10 @@ void initialize_rom_ram_size()
 {
     cout << "Initializing external ROM and RAM...";
 
-    // Initialize ROM. We allocate -1 banks for ROM because the first bank will already be in CPU memory
-    ext_rom_size = (rom_size < 0x4000 ? 0x00 : rom_size - 0x4000);
+    // Initialize external ROM. We allocate total size - 1 banks for ROM because 
+    // the first bank will already be in CPU memory. Bank 2 and beyond will all
+    // be accessible in 0x8000 - 0xFFFF as configureed.
+    ext_rom_size = (rom_size <= 0x8000 ? 0x00 : rom_size - 0x4000);
     ext_ram_size = ram_size; // (ram_size < 0x2000 ? 0x00 : ram_size - 0x2000); For RAM, we do not because this refers to external only!
 
     // Only zero out external ROM/RAM.

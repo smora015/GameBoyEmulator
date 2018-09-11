@@ -24,7 +24,7 @@ void GBCPU::writeByte(byte data, word addr)
         // Do not write to read only memory
         if (addr <= EXTERNAL_ROM_END)
         {
-            cout << "Writing to ROM area!" << endl;
+            printf("Writing to ROM bank at %X!\n", addr);
         }
 
         // If memory is written to WRAM or ECHO WRAM, write to both. Note: last 512 bytes not echoed.
@@ -102,7 +102,13 @@ byte GBCPU::readByte(word addr)
         else if (addr >= 0xFEA0 && addr < 0xFEFF)
         {
             cout << "Restricted memory region!" << endl;
-            return 0x00;
+            return 0xFF;
+        }
+
+        else if (addr == JOYPAD_P1)
+        {
+            // TODO: Remove this once joypad functionality has been implemented
+            return 0x0F;
         }
 
         // Otherwise read from wherever

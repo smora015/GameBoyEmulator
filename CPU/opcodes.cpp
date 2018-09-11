@@ -636,6 +636,7 @@ inline void GBCPU::CALL()
 // RESET
 inline void GBCPU::RST(byte n)
 {
+    printf("RST called at %X!\n", n);
     // Push the address of the current instruction onto the stack
     PUSH(((PC+1) >> 8), ((PC+1) & 0x00FF));
 

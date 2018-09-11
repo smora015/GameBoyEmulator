@@ -193,7 +193,7 @@ GBCPU::~GBCPU()
 
 void GBCPU::execute()
 {
-    printf("PC: $%04X OPCODE: %02X AF: 0x%02X%02X BC: 0x%02X%02X DE: 0x%02X%02X HL: 0x%02X%02X SP: 0x%04X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
+    //printf("PC: $%04X OPCODE: %02X AF: 0x%02X%02X BC: 0x%02X%02X DE: 0x%02X%02X HL: 0x%02X%02X SP: 0x%04X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
 	(this->*(opcodes)[MEM[PC]])();
 }
 
@@ -219,14 +219,15 @@ void GBCPU::init()
     PC = 0x100;
 
     // For GB, set to this value. For others, will be different
-    A = (byte) 0x11; //0x01;
-    SetF(0x80);      //0xB0;
+    // Note: Values commented out are not valid! Keeping in case they are used for other configs...
+    A = (byte) 0x01; //0x11;
+    SetF(0xB0);      //0x80;
     B = (byte) 0x00;
-    C = (byte) 0x00; //0x13;
-    D = (byte) 0xFF; //0x00; 
-    E = (byte) 0x56; //0xD8;
-    H = (byte) 0x00; //0x01; 
-    L = (byte) 0x0D; //0x4D;
+    C = (byte) 0x13; //0x00;
+    D = (byte) 0x00; //0xFF; 
+    E = (byte) 0xD8; //0x56;
+    H = (byte) 0x01; //0x00; 
+    L = (byte) 0x4D; //0x0D;
     
     SP = (word) 0xFFFE;
 
@@ -261,6 +262,9 @@ void GBCPU::init()
     MEM[0xFF4A] = (byte) 0x00; // WY
     MEM[0xFF4B] = (byte) 0x00; // WX
     MEM[0xFFFF] = (byte) 0x00; // IE
+
+    // TODO: Remove this once Joypad functionality has been implemented
+    MEM[JOYPAD_P1] = 0x0F;
 
     cout << "done!" << endl;
 }

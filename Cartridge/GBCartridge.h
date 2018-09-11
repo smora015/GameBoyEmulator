@@ -46,6 +46,7 @@ extern size_t ram_size;        // Actual total RAM size in bytes
 extern size_t ext_rom_size;    // Size of external ROM in bytes
 extern size_t ext_ram_size;    // Size of external RAM in bytes
 extern MBC_TYPES rom_mbc_type; // The MBC cartridge type
+extern char rom_name[17];               // The 16-byte name specified in the cartridge from $134-143
 
 void load_rom(string rom_name, GBCPU & cpu);
 

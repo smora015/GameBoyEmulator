@@ -178,6 +178,12 @@ byte GBCPU::MBC1read(word addr)
         return 0x00;
     }
 
+    else if (addr == JOYPAD_P1)
+    {
+        // TODO: Remove this once joypad functionality has been implemented
+        return 0x0F;
+    }
+
     // Read from other areas of memory normally
     else
         return MEM[addr];
