@@ -1,17 +1,15 @@
-/*
-    Name:        memory.cpp
-    Author:      Sergio Morales
-    Date:        09/16/2016
-    Description: This file contains the definitions for functions that
-                 load and parse through a GameBoy rom
-*/
+/*  Name:        GBCartridge.cpp
+    Author:      Sergio Morales [sergiomorales.me]
+    Created:     October 19th, 2016
+    Modified:    September 12th, 2018
+    Description: Description: This file contains the definitions for functions that
+                 load and parse through a GameBoy rom. */
+
 #include "GBCartridge.h"
-#include "mbc.h"
-#include "gameboy.h"
 
 // Define cartridge header variables
-byte * ext_rom;         // Holds all external (switchable) RAM, to be added in memory by 16 Kbyte banks
-byte * ext_ram;         // Holds all external (switchable) ROM, to be added in memory by 8 Kbyte banks
+BYTE * ext_rom;         // Holds all external (switchable) RAM, to be added in memory by 16 Kbyte banks
+BYTE * ext_ram;         // Holds all external (switchable) ROM, to be added in memory by 8 Kbyte banks
 size_t rom_size;        // Actual ROM size in bytes
 size_t ram_size;        // Actual RAM size in bytes
 size_t ext_rom_size;    // Size of external ROM in bytes
@@ -106,10 +104,6 @@ void load_rom(string rom_name, GBCPU & cpu)
 
         // Populate external rom with data
         ext_rom[i] = c;
-
-        // Copy first bank to switchable ROM for temporarily
-        if (i < 0x4000)
-            cpu.MEM[i + 0x4000] = ext_rom[i];
 
         ++num_of_bytes;
     }
@@ -399,19 +393,19 @@ void initialize_rom_ram_size()
     // Initialize external ROM. We allocate total size - 1 banks for ROM because 
     // the first bank will already be in CPU memory. Bank 2 and beyond will all
     // be accessible in 0x8000 - 0xFFFF as configureed.
-    ext_rom_size = (rom_size <= 0x8000 ? 0x00 : rom_size - 0x4000);
+    ext_rom_size = (rom_mbc_type == ROM_ONLY ? 0x00 : rom_size - 0x4000);
     ext_ram_size = ram_size; // (ram_size < 0x2000 ? 0x00 : ram_size - 0x2000); For RAM, we do not because this refers to external only!
 
     // Only zero out external ROM/RAM.
     if (ext_rom_size > 0)
     {
-        ext_rom = (byte *)malloc(ext_rom_size); // 16 KByte banks = 16384 bytes per piece
+        ext_rom = (BYTE *)malloc(ext_rom_size); // 16 KByte banks = 16384 bytes per piece
         memset(ext_rom, 0, ext_rom_size);
     }
 
     if (ext_ram_size > 0)
     {
-        ext_ram = (byte *)malloc(ext_ram_size); // 8 KByte banks = 8192 bytes per piece
+        ext_ram = (BYTE *)malloc(ext_ram_size); // 8 KByte banks = 8192 bytes per piece
         memset(ext_ram, 0, ext_ram_size);
     }
 

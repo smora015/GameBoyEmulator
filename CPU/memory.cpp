@@ -1,19 +1,16 @@
-/*
-    Name:        memory.cpp
-    Author:      Sergio Morales
-    Date:        08/30/2016
-    Description: This file contains the definitions for functions that
-                 access internal registers and memory for the CPU.
+/*  Name:        memory.cpp
+    Author:      Sergio Morales [sergiomorales.me]
+    Created:     August 30th, 2016
+    Modified:    September 12th, 2018
+    Description: Description: This file contains the definitions for functions that
+                 access internal registers and memory for the CPU. */
 
-*/
-#include "GBCPU.h"
-#include "GBPPU.h"
 #include "GBCartridge.h"
-#include "gameboy.h"
+#include "GBPPU.h"
 
 
 // writeByte - Write one byte to memory
-void GBCPU::writeByte(byte data, word addr)
+void GBCPU::writeByte(BYTE data, WORD addr)
 {
     if (rom_mbc_type == ROM_MBC1)
     {
@@ -49,6 +46,10 @@ void GBCPU::writeByte(byte data, word addr)
             cout << "Restricted memory region!" << endl;
         }
 
+        // Writing to JOYPAD_P1 should only set P14 and P15 outputs
+        else if (addr == JOYPAD_P1)
+            MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x0F) | (data & 0x30);
+
         // Reset the DIV register if we're writing to it
         else if (addr == DIV)
             MEM[DIV] = 0;
@@ -76,15 +77,15 @@ void GBCPU::writeByte(byte data, word addr)
 
 }
 
-void GBCPU::writeWord(word data, word addr)
+void GBCPU::writeWord(WORD data, WORD addr)
 {
     // Write LSB first
-    writeByte((byte)(data & 0xFF), addr);
-    writeByte((byte)((data >> 8) & 0xFF), addr + 1);
+    writeByte((BYTE)(data & 0xFF), addr);
+    writeByte((BYTE)((data >> 8) & 0xFF), addr + 1);
 }
 
 // readByte - Read byte from memory
-byte GBCPU::readByte(word addr)
+BYTE GBCPU::readByte(WORD addr)
 {
     if (rom_mbc_type == ROM_MBC1)
     {
@@ -107,10 +108,12 @@ byte GBCPU::readByte(word addr)
 
         else if (addr == JOYPAD_P1)
         {
-            // TODO: Remove this once joypad functionality has been implemented
-            return 0x0F;
-        }
+            // Trap reads to JOYPAD_P1 in order to read input from SDL, otherwise
+            // processing input in the main loop will overwrite key presses
+            ProcessJoyPad();
 
+            return MEM[JOYPAD_P1];
+        }
         // Otherwise read from wherever
         else
             return MEM[addr];
@@ -123,40 +126,120 @@ byte GBCPU::readByte(word addr)
 
 }
 
+
+void GBCPU::ProcessJoyPad()
+{
+    //bool interrupt_req_prev = (CPU.MEM[INTERRUPT_FLAG] & 0x10) ? true : false;
+    // Use temproary variables to store key presses. Checking JOYPAD_P1 itself will
+    // result in unexpected interrupts due to the fact that it may have been set to 0.
+    BYTE buttons = 0xC0;
+    BYTE dpad = 0xC0;
+
+    // Poll event
+    SDL_PollEvent(&SDL_GB_window_event);
+    SDL_GB_keyboard_state = SDL_GetKeyboardState(NULL);
+
+    if ((SDL_GB_window_event.key.type == SDL_KEYUP) ||
+        (SDL_GB_window_event.key.type == SDL_KEYDOWN))
+    {
+        if (!(MEM[JOYPAD_P1] & JOYPAD_P14))
+        {
+            //cout << "KEY PRESSED! " << event.key.keysym.sym << endl;
+
+            // ROM requesting read of LEFT DOWN RIGHT UP 
+            if (SDL_GB_keyboard_state[SDL_SCANCODE_LEFT])
+                dpad |= JOYPAD_P11;
+            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P11);
+
+            else if (SDL_GB_keyboard_state[SDL_SCANCODE_RIGHT])
+                dpad |= JOYPAD_P10;
+            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P10);
+
+            if (SDL_GB_keyboard_state[SDL_SCANCODE_DOWN])
+                dpad |= JOYPAD_P13;
+            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P13);
+
+            else if (SDL_GB_keyboard_state[SDL_SCANCODE_UP])
+                dpad |= JOYPAD_P12;
+            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P12);
+
+        }
+
+        else if (!(MEM[JOYPAD_P1] & JOYPAD_P15))
+        {
+            //cout << "KEY PRESSED! " << event.key.keysym.sym << endl;
+
+            // ROM requesting read of A B SELECT START
+            if (SDL_GB_keyboard_state[SDL_SCANCODE_Z])
+                buttons |= JOYPAD_P11;
+            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P11);
+
+            if (SDL_GB_keyboard_state[SDL_SCANCODE_X])
+                buttons |= JOYPAD_P10;
+            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P10);
+
+            if (SDL_GB_keyboard_state[SDL_SCANCODE_PERIOD])
+                buttons |= JOYPAD_P12;
+            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P12);
+
+            if (SDL_GB_keyboard_state[SDL_SCANCODE_SLASH])
+                buttons |= JOYPAD_P13;
+            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P13);
+        }
+    }
+
+    //if ((CPU.MEM[JOYPAD_P1] & 0x0F) != 0x0F)
+        //CPU.MEM[INTERRUPT_FLAG] |= 0x10;
+
+    if (dpad & 0x0F)
+    {
+        // Update JOYPAD_P1 in memory and request interrupt (if needed)
+        MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x30) | (~dpad);
+        MEM[INTERRUPT_FLAG] |= 0x10;
+    }
+
+    else if (buttons & 0x0F)
+    {
+        // Update JOYPAD_P1 in memory and request interrupt (if needed)
+        MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x30) | (~buttons);
+        MEM[INTERRUPT_FLAG] |= 0x10;
+    }
+}
+
 // readImmByte - Read immediate byte from memory
-byte GBCPU::readImmByte()
+BYTE GBCPU::readImmByte()
 {
     return readByte(PC + 1);
 }
 
 // ReadWord - Read word from memory
-word GBCPU::readWord(word addr)
+WORD GBCPU::readWord(WORD addr)
 {
     // Get LSB byte first
-    byte LSB = readByte(addr);
-    byte MSB = readByte(addr + 1);
+    BYTE LSB = readByte(addr);
+    BYTE MSB = readByte(addr + 1);
 
-    word temp = CASTWD(MSB, LSB);
+    WORD temp = CASTWD(MSB, LSB);
     return temp;
 }
 
 // ReadWord - Read word from memory
-word GBCPU::readImmWord()
+WORD GBCPU::readImmWord()
 {
     // Get LSB byte first
-    byte LSB = readByte(PC + 1);
-    byte MSB = readByte(PC + 2);
+    BYTE LSB = readByte(PC + 1);
+    BYTE MSB = readByte(PC + 2);
 
-    word temp = CASTWD(MSB, LSB);
+    WORD temp = CASTWD(MSB, LSB);
     return temp;
 }
 
-void GBCPU::PerformDMATransfer(byte source)
+void GBCPU::PerformDMATransfer(BYTE source)
 {
     // The real source address is multiplied by 0x100 which is 256, which essentially left shift by 8. 
-    for (word addr = 0x00; addr <= 0x9F; ++addr)
+    for (WORD addr = 0x00; addr <= 0x9F; ++addr)
     {
-        writeByte(readByte((((word)source << 8) | (addr))), SPRITE_TABLE_START + addr);
+        writeByte(readByte((((WORD)source << 8) | (addr))), SPRITE_TABLE_START + addr);
     }
 }
 
@@ -164,9 +247,9 @@ void GBCPU::PerformDMATransfer(byte source)
 // Cannot inline these because they're used in other .cpp files! Note this may have to be done on
 // on the rest of these memory access functions.
 // GetF - Get Status Register as a byte
-byte GBCPU::GetF()
+BYTE GBCPU::GetF()
 {
-    byte temp = 0x00;
+    BYTE temp = 0x00;
     temp |= ((CARRY_FLAG ? 0x01 : 0x00) << 4);
     temp |= ((HALF_CARRY_FLAG ? 0x01 : 0x00) << 5);
     temp |= ((SUBTRACT_FLAG ? 0x01 : 0x00) << 6);
@@ -176,7 +259,7 @@ byte GBCPU::GetF()
 }
 
 // SetF - Set Status register from a byte
-void GBCPU::SetF(byte F)
+void GBCPU::SetF(BYTE F)
 {
     CARRY_FLAG = (F & 0x10) ? true : false;
     HALF_CARRY_FLAG = (F & 0x20) ? true : false;
@@ -185,52 +268,52 @@ void GBCPU::SetF(byte F)
 }
 
 // Get A and F as a word
-word GBCPU::GetAF()
+WORD GBCPU::GetAF()
 {
     return CASTWD(A, GetF());
 }
 
 // Set A and F from a word
-void GBCPU::SetAF(word data)
+void GBCPU::SetAF(WORD data)
 {
     A = ((data >> 8) & 0xFF);
     SetF((data & 0xFF));
 }
 
 // Get B and C as a word
-word GBCPU::GetBC()
+WORD GBCPU::GetBC()
 {
     return CASTWD(B, C);
 }
 
 // Set B and C from a word
-void GBCPU::SetBC(word data)
+void GBCPU::SetBC(WORD data)
 {
     B = ((data >> 8) & 0xFF);
     C = (data & 0xFF);
 }
 
 // Get D and E as a word
-word GBCPU::GetDE()
+WORD GBCPU::GetDE()
 {
     return CASTWD(D, E);
 }
 
 // Set D and E from a word
-void GBCPU::SetDE(word data)
+void GBCPU::SetDE(WORD data)
 {
     D = ((data >> 8) & 0xFF);
     E = (data & 0xFF);
 }
 
 // Get H and L as a word
-word GBCPU::GetHL()
+WORD GBCPU::GetHL()
 {
     return CASTWD(H, L);
 }
 
 // Set H and L from a word
-void GBCPU::SetHL(word data)
+void GBCPU::SetHL(WORD data)
 {
     H = ((data >> 8) & 0xFF);
     L = (data & 0xFF);

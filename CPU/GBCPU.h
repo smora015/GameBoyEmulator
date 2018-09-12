@@ -3,7 +3,6 @@
 
 #include "gameboy.h"
 #include <iostream>
-#include <fstream>
 
 using namespace std;
 
@@ -14,14 +13,14 @@ using namespace std;
 class GBCPU
 {
 public:
-	byte MEM[MAX_GB_MEMORY]; 	// CPU Memory (PRG) Currently 64K max size
-	//word ADDR;					// CPU Address Bus  - UNUSED
+	BYTE MEM[MAX_GB_MEMORY]; 	// CPU Memory (PRG) Currently 64K max size
+	//WORD ADDR;					// CPU Address Bus  - UNUSED
 	//byte DATA;					// CPU Data Bus     - UNUSED
 
     /***** CPU Registers *****/
-    word SP;					// Stack Pointer
-	word PC;					// Program Counter
-	byte A;						// Accumulator Register
+    WORD SP;					// Stack Pointer
+	WORD PC;					// Program Counter
+	BYTE A;						// Accumulator Register
 
     // Status Register (F)
     bool CARRY_FLAG;            // (C) Carry Flag      - 0x10 (Bit 4)
@@ -29,14 +28,14 @@ public:
     bool SUBTRACT_FLAG;         // (N) Subtact Flag    - 0x40 (Bit 6)
     bool ZERO_FLAG;             // (Z) Zero Flag       - 0x80 (Bit 7)
 
-	byte B, C, 					// General Purpose Registers
+	BYTE B, C, 					// General Purpose Registers
 		 D, E,					// These may be paired to form 16-bit registers
 		 H, L;					// (same applies for A & F)
 
 
     /***** Internal Variables *****/
     bool IME;                   // Interrupt Master Enable flag
-    byte cycles;				// The number of cycles currently counted
+    BYTE cycles;				// The number of cycles currently counted
     unsigned short DIV_counter; // Internal DIV cycle counter to increment the DIV counter in memory
     unsigned short TMA_counter; // Internal TMA cycle counter to increment the time counter in memory
 
@@ -48,28 +47,30 @@ public:
     void (GBCPU::*CBopcodes[256])(); // Array of pointers to CB-prefix member Opcode functions
 
     /***** Memory Access functions - memory.cpp/mbc.cpp *****/
-    void MBC1write(word addr, byte data);
-    byte MBC1read(word addr);
-    void writeByte(byte data, word addr);
-    void writeWord(word data, word addr);
-    byte readByte(word addr);
-    byte readImmByte();
-    word readWord(word addr);
-    word readImmWord();
+    void MBC1write(WORD addr, BYTE data);
+    BYTE MBC1read(WORD addr);
+    void writeByte(BYTE data, WORD addr);
+    void writeWord(WORD data, WORD addr);
+    BYTE readByte(WORD addr);
+    BYTE readImmByte();
+    WORD readWord(WORD addr);
+    WORD readImmWord();
 
-    void PerformDMATransfer(byte source);
+    void ProcessJoyPad();
 
-    byte GetF(); // Get Status Register as a byte
-    void SetF(byte F); // Set Status register from a byte
+    void PerformDMATransfer(BYTE source);
 
-    word GBCPU::GetAF();
-    void GBCPU::SetAF(word data);
-    word GBCPU::GetBC();
-    void GBCPU::SetBC(word data);
-    word GBCPU::GetDE();
-    void GBCPU::SetDE(word data);
-    word GBCPU::GetHL();
-    void GBCPU::SetHL(word data);
+    BYTE GetF(); // Get Status Register as a byte
+    void SetF(BYTE F); // Set Status register from a byte
+
+    WORD GBCPU::GetAF();
+    void GBCPU::SetAF(WORD data);
+    WORD GBCPU::GetBC();
+    void GBCPU::SetBC(WORD data);
+    WORD GBCPU::GetDE();
+    void GBCPU::SetDE(WORD data);
+    WORD GBCPU::GetHL();
+    void GBCPU::SetHL(WORD data);
 
     /***** Debug Functions - GBCPU.cpp *****/
     void printMEM(string name); // Print entire contents of CPU memory into a file
@@ -82,60 +83,60 @@ public:
 
     /***** Opcode Functions - opcodes.cpp *****/
     // ADD A, n
-    inline void ADD(byte & reg, byte arg);
-    inline void ADDC(byte arg);
+    inline void ADD(BYTE & reg, BYTE arg);
+    inline void ADDC(BYTE arg);
 
     // ADD HL, n
-    inline void ADD(word arg);
+    inline void ADD(WORD arg);
 
     // ADD SP, n
     inline void ADDSP();
 
-    inline void SUB(byte & reg, byte arg);
-    inline void SUBC(byte arg);
+    inline void SUB(BYTE & reg, BYTE arg);
+    inline void SUBC(BYTE arg);
 
-    inline void AND(byte & reg, byte arg);
-    inline void OR(byte & reg, byte arg);
-    inline void XOR(byte & reg, byte arg);
-    inline void CP(byte & reg, byte arg);
-    inline void INCR(byte & reg);
-    inline void DECR(byte & reg);
-    inline void SWAP(byte & reg);    
+    inline void AND(BYTE & reg, BYTE arg);
+    inline void OR(BYTE & reg, BYTE arg);
+    inline void XOR(BYTE & reg, BYTE arg);
+    inline void CP(BYTE & reg, BYTE arg);
+    inline void INCR(BYTE & reg);
+    inline void DECR(BYTE & reg);
+    inline void SWAP(BYTE & reg);    
     inline void DAA();  // Decimal Adjust Register A
     inline void RLCA(); // Rotate A left
 
     // Rotate n left
-    inline void RLC(byte & reg);
+    inline void RLC(BYTE & reg);
 
     // Rotate A left with carry
     inline void RLA();
 
     // Rotate n left with carry
-    inline void RL(byte & reg);
+    inline void RL(BYTE & reg);
 
     // Rotate A right
     inline void RRCA();
 
     // Rotate n right
-    inline void RRC(byte & reg);
+    inline void RRC(BYTE & reg);
 
     // Rotate A right through carry
     inline void RRA();
 
     // Rotate n right through carry
-    inline void RR(byte & reg);
+    inline void RR(BYTE & reg);
 
     // SLA n
-    inline void SLA(byte & reg);
+    inline void SLA(BYTE & reg);
 
     // SRA n
-    inline void SRA(byte & reg);
+    inline void SRA(BYTE & reg);
 
     // SRA n
-    inline void SRL(byte & reg);
+    inline void SRL(BYTE & reg);
 
     // BIT b,r
-    inline void BIT(byte bit, byte & reg);
+    inline void BIT(BYTE bit, BYTE & reg);
 
     // JP cc
     inline void JP();
@@ -147,7 +148,7 @@ public:
     inline void CALL();
 
     // RESET
-    inline void RST(byte n);
+    inline void RST(BYTE n);
 
     // RET cc
     inline void RET();

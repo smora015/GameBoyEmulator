@@ -1,24 +1,21 @@
-/*
-    Name:        mbc.cpp
-    Author:      Sergio Morales
-    Date:        08/30/2016
+/*  Name:        mbc.cpp
+    Author:      Sergio Morales [sergiomorales.me]
+    Created:     August 30th, 2016
+    Modified:    September 12th, 2018
     Description: This file contains the logic for manipulating memory based upon the
                  corresponding Memory Bank Controller selected from $147 in the
-                 cartridge header region.
-*/
+                 cartridge header region. */
 #include "mbc.h"
-#include "GBCPU.h"
-#include "GBPPU.h"
-#include "GBCartridge.h"
 
 // Define MBC variables
 memory_model_types memory_model; // The current maximum memory model for MBC
-byte current_rom_bank;           // The current switchable rom bank being used
-byte current_ram_bank;           // The current switchable ram bank beign used
+BYTE current_rom_bank;           // The current switchable rom bank being used
+BYTE current_ram_bank;           // The current switchable ram bank beign used
 bool ram_bank_access_enabled;    // Indicates if RAM read/writes are enabled
 
+
 // MBC1Write: Determines the appropriate bank switching selections 
-void GBCPU::MBC1write(word addr, byte data)
+void GBCPU::MBC1write(WORD addr, BYTE data)
 {
     // Write to external RAM if enabled
     if ((addr >= EXTERNAL_RAM_START) && (addr <= EXTERNAL_RAM_END))
@@ -116,6 +113,10 @@ void GBCPU::MBC1write(word addr, byte data)
         cout << "Restricted memory region!" << endl;
     }
 
+    // Writing to JOYPAD_P1 should only set P14 and P15 outputs
+    else if (addr == JOYPAD_P1)
+        MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x0F) | (data & 0x30);
+
     // Reset the DIV register if we're writing to it
     else if (addr == DIV)
         MEM[DIV] = 0;
@@ -147,7 +148,7 @@ void GBCPU::MBC1write(word addr, byte data)
 }
 
 // MBC1read: Read data from RAM/ROM banks in a MBC1 memory model
-byte GBCPU::MBC1read(word addr)
+BYTE GBCPU::MBC1read(WORD addr)
 {
     // External ROM read from current bank #
     if ((addr >= EXTERNAL_ROM_START) && (addr <= EXTERNAL_ROM_END))
@@ -167,6 +168,15 @@ byte GBCPU::MBC1read(word addr)
             
     }
 
+    else if (addr == JOYPAD_P1)
+    {
+        // Trap reads to JOYPAD_P1 in order to read input from SDL, otherwise
+        // processing input in the main loop will overwrite key presses
+        ProcessJoyPad();
+
+        return MEM[JOYPAD_P1];
+    }
+
     // Read ECHO WRAM from WRAM
     else if (addr >= WRAM_ECHO_START && addr <= WRAM_ECHO_END)
         return MEM[addr - (WRAM_ECHO_START - WRAM_START)];
@@ -177,13 +187,7 @@ byte GBCPU::MBC1read(word addr)
         cout << "Restricted memory region!" << endl;
         return 0x00;
     }
-
-    else if (addr == JOYPAD_P1)
-    {
-        // TODO: Remove this once joypad functionality has been implemented
-        return 0x0F;
-    }
-
+    
     // Read from other areas of memory normally
     else
         return MEM[addr];

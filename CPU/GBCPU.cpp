@@ -1,13 +1,15 @@
-/*
-Name:        GBCPU.cpp
-Author:      Sergio Morales
-Date:        09/27/2016
-Description: This file contains the functions utilized for initializing
-             and executing CPU opcodes.
-*/
+/*  Name:        GBCPU.cpp
+    Author:      Sergio Morales [sergiomorales.me]
+    Created:     August 26th, 2016
+    Modified:    September 12th, 2018
+    Description: This file contains the functions utilized for initializing
+                 and executing CPU opcodes. */
 
 #include "GBCPU.h"
-#include "gameboy.h"
+
+#ifdef DEBUG_GAMEBOY
+#include <fstream>   // Used in printMEM
+#endif
 
 GBCPU::GBCPU()
 {
@@ -197,6 +199,7 @@ void GBCPU::execute()
 	(this->*(opcodes)[MEM[PC]])();
 }
 
+#ifdef DEBUG_GAMEBOY
 // printMEM - Debug function that prints entire contents of CPU memory into a file.
 void GBCPU::printMEM(string name)
 {
@@ -204,7 +207,7 @@ void GBCPU::printMEM(string name)
     file.write((char*)MEM, MAX_GB_MEMORY);
     file.close();
 }
-
+#endif
 void GBCPU::init()
 {
     cout << "GBCPU initializng...";
@@ -220,51 +223,51 @@ void GBCPU::init()
 
     // For GB, set to this value. For others, will be different
     // Note: Values commented out are not valid! Keeping in case they are used for other configs...
-    A = (byte) 0x01; //0x11;
+    A = (BYTE) 0x01; //0x11;
     SetF(0xB0);      //0x80;
-    B = (byte) 0x00;
-    C = (byte) 0x13; //0x00;
-    D = (byte) 0x00; //0xFF; 
-    E = (byte) 0xD8; //0x56;
-    H = (byte) 0x01; //0x00; 
-    L = (byte) 0x4D; //0x0D;
+    B = (BYTE) 0x00;
+    C = (BYTE) 0x13; //0x00;
+    D = (BYTE) 0x00; //0xFF; 
+    E = (BYTE) 0xD8; //0x56;
+    H = (BYTE) 0x01; //0x00; 
+    L = (BYTE) 0x4D; //0x0D;
     
-    SP = (word) 0xFFFE;
+    SP = (WORD) 0xFFFE;
 
-    MEM[0xFF05] = (byte) 0x00; // TIMA
-    MEM[0xFF06] = (byte) 0x00; // TMA
-    MEM[0xFF07] = (byte) 0x00; // TAC
-    MEM[0xFF10] = (byte) 0x80; // NR10
-    MEM[0xFF11] = (byte) 0xBF; // NR11
-    MEM[0xFF12] = (byte) 0xF3; // NR12
-    MEM[0xFF14] = (byte) 0xBF; // NR14
-    MEM[0xFF16] = (byte) 0x3F; // NR21
-    MEM[0xFF17] = (byte) 0x00; // NR22
-    MEM[0xFF19] = (byte) 0xBF; // NR24
-    MEM[0xFF1A] = (byte) 0x7F; // NR30
-    MEM[0xFF1B] = (byte) 0xFF; // NR31
-    MEM[0xFF1C] = (byte) 0x9F; // NR32
-    MEM[0xFF1E] = (byte) 0xBF; // NR33
-    MEM[0xFF20] = (byte) 0xFF; // NR41
-    MEM[0xFF21] = (byte) 0x00; // NR42
-    MEM[0xFF22] = (byte) 0x00; // NR43
-    MEM[0xFF23] = (byte) 0xBF; // NR30
-    MEM[0xFF24] = (byte) 0x77; // NR50
-    MEM[0xFF25] = (byte) 0xF3; // NR51
-    MEM[0xFF26] = (byte) 0xF1; // For GB 0xF1, for SGB 0xF0
-    MEM[0xFF40] = (byte) 0x91; // LCDC
-    MEM[0xFF42] = (byte) 0x00; // SCY
-    MEM[0xFF43] = (byte) 0x00; // SCX
-    MEM[0xFF45] = (byte) 0x00; // LYC
-    MEM[0xFF47] = (byte) 0xFC; // BGP
-    MEM[0xFF48] = (byte) 0xFF; // OBP0
-    MEM[0xFF49] = (byte) 0xFF; // OBP1
-    MEM[0xFF4A] = (byte) 0x00; // WY
-    MEM[0xFF4B] = (byte) 0x00; // WX
-    MEM[0xFFFF] = (byte) 0x00; // IE
+    MEM[0xFF05] = (BYTE) 0x00; // TIMA
+    MEM[0xFF06] = (BYTE) 0x00; // TMA
+    MEM[0xFF07] = (BYTE) 0x00; // TAC
+    MEM[0xFF10] = (BYTE) 0x80; // NR10
+    MEM[0xFF11] = (BYTE) 0xBF; // NR11
+    MEM[0xFF12] = (BYTE) 0xF3; // NR12
+    MEM[0xFF14] = (BYTE) 0xBF; // NR14
+    MEM[0xFF16] = (BYTE) 0x3F; // NR21
+    MEM[0xFF17] = (BYTE) 0x00; // NR22
+    MEM[0xFF19] = (BYTE) 0xBF; // NR24
+    MEM[0xFF1A] = (BYTE) 0x7F; // NR30
+    MEM[0xFF1B] = (BYTE) 0xFF; // NR31
+    MEM[0xFF1C] = (BYTE) 0x9F; // NR32
+    MEM[0xFF1E] = (BYTE) 0xBF; // NR33
+    MEM[0xFF20] = (BYTE) 0xFF; // NR41
+    MEM[0xFF21] = (BYTE) 0x00; // NR42
+    MEM[0xFF22] = (BYTE) 0x00; // NR43
+    MEM[0xFF23] = (BYTE) 0xBF; // NR30
+    MEM[0xFF24] = (BYTE) 0x77; // NR50
+    MEM[0xFF25] = (BYTE) 0xF3; // NR51
+    MEM[0xFF26] = (BYTE) 0xF1; // For GB 0xF1, for SGB 0xF0
+    MEM[0xFF40] = (BYTE) 0x91; // LCDC
+    MEM[0xFF42] = (BYTE) 0x00; // SCY
+    MEM[0xFF43] = (BYTE) 0x00; // SCX
+    MEM[0xFF45] = (BYTE) 0x00; // LYC
+    MEM[0xFF47] = (BYTE) 0xFC; // BGP
+    MEM[0xFF48] = (BYTE) 0xFF; // OBP0
+    MEM[0xFF49] = (BYTE) 0xFF; // OBP1
+    MEM[0xFF4A] = (BYTE) 0x00; // WY
+    MEM[0xFF4B] = (BYTE) 0x00; // WX
+    MEM[0xFFFF] = (BYTE) 0x00; // IE
 
-    // TODO: Remove this once Joypad functionality has been implemented
-    MEM[JOYPAD_P1] = 0x0F;
+    // Initialize JOYPAD to no buttons pressed
+    MEM[JOYPAD_P1] = 0x3F;
 
     cout << "done!" << endl;
 }

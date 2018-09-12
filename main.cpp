@@ -1,35 +1,40 @@
-// Standard Libraries
-#include <iostream>
+/*  Name:        main.cpp
+    Author:      Sergio Morales [sergiomorales.me]
+    Created:     August 26th, 2016
+    Modified:    September 12th, 2018
+    Description: This file contains the logic to initialize and begin execution
+                 of the Gameboy emulator. */
+
+#include <SDL.h>
 #include <Windows.h>
 
-// SDL Library
-#include <SDL.h>
-
 // Game Boy libraries
-#include "gameboy.h"      // Data and Macro definitions
-#include "GBCartridge.h"  // ROM Cartridge library
-#include "GBCPU.h"        // Game Boy CPU library
 #include "GBPPU.h"        // Game Boy PPU library
+#include "GBCartridge.h"  // ROM Cartridge library
 #include "render.h"       // Graphics Rendering library
 
+// Top-level emulator configurations
 //#define DEBUG_GAMEBOY
 
-using namespace std;
-
+// Global SDL variables
+const Uint8 *SDL_GB_keyboard_state;
+SDL_Event SDL_GB_window_event;
 
 // Checks the CPU Interrupt flags and perform service routines if any are required
 void CheckInterrupts(GBCPU & CPU);
 
 // Updates CPU Timer register if enabled
-void UpdateTimer(byte cycles, GBCPU & CPU);
+void UpdateTimer(BYTE cycles, GBCPU & CPU);
 
 // Update DIV register
-void UpdateDIV(byte cycles, GBCPU & CPU);
+void UpdateDIV(BYTE cycles, GBCPU & CPU);
+
+// Process Inputs from SDL events
+bool ProcessSDLEvents(SDL_Event &event, GBCPU & CPU);
 
 int main(int argc, char **argv)
 {
     // Initialize Simple DirectMedia Library for video rendering, audio, and keyboard events
-    SDL_Event event;
     SDL_Renderer *renderer;
     SDL_Texture *texture;
     SDL_Window *window;
@@ -43,7 +48,7 @@ int main(int argc, char **argv)
     SDL_RenderClear(renderer);
 
     // Load ROM data and initialize CPU/PPU
-    string default_rom = "01 - special.gb"; //"Tetris (World).gb"; //BIOS.gb"; //;//"02-interrupts.gb";//"cpu_instrs.gb"; // ; 
+    string default_rom = "Tetris (World).gb"; //"01 - special.gb"; //BIOS.gb"; //;//"02-interrupts.gb";//"cpu_instrs.gb"; // ; 
     GBCPU CPU = GBCPU();
 
     load_rom(argc < 2 ? default_rom : string(argv[1]), CPU);
@@ -65,49 +70,53 @@ int main(int argc, char **argv)
     // Limit max # of CPU executions from debug use
     int counter = 0;
 
-	// This flag captures the user clicking 'X' in order to elegantly quit the program
+    // This flag captures the user clicking 'X' in order to elegantly quit the program
     bool quit = false;
 
 
     // DEBUG: Max executions
     int counter_max = strtol((argc < 3 ? "200000" : argv[2]), NULL, 10);
 
-	// Main execution loop
-	while (1)
+    // Main execution loop
+    while (1)
     {
-        // Update the screen with the pixel buffer
+        // Update the screen with the pixel buffer. The FPS is assumed to be capped at 60 by SDL
         renderPixelBuffer(renderer, texture);
 
-        // Execute the CPU and PPU by the number of clock cycles executed during this frame (assuming 60 FPS capped by SDL)
+        // Execute the CPU and PPU by the number of clock cycles executed during this frame
         int cycles_in_frame = 0; // GAMEBOY_CYCLES_FRAME;
         while (cycles_in_frame < GAMEBOY_CYCLES_FRAME )
         {
-            ++counter; 
+            /* TODO: Infrastructure optimizations
+                     1) Remove cycles as argument. CPU class already has cycles internally defined
+                     2) Rename file to gameboy.cpp
+                     3) Move Timer & DIV update logic to their own files. Will help with
+                        making project robust to multi-platforms later down the line. */
+                    
             // Otherwise, execute the current CPU instruction
             CPU.execute();
 
             // Update timers based on # of cycles the current instruction took
-            byte cycles = CPU.cycles; 
-            UpdateTimer(cycles, CPU);
+            UpdateTimer(CPU.cycles, CPU);
 
             // Update DIV registers
-            UpdateDIV(cycles, CPU);
+            UpdateDIV(CPU.cycles, CPU);
 
             // Execute the PPU based on the # of cycles the current instruction took
-            ExecutePPU(cycles, CPU);
+            ExecutePPU(CPU.cycles, CPU);
 
             // Check for any interrupts being requested if enabled
             CheckInterrupts(CPU);
 
             // Update current number of cycles in this frame
-            cycles_in_frame += cycles;
+            cycles_in_frame += CPU.cycles;
 
-            // Quit if X has been clicked
-            if ((SDL_PollEvent(&event) && event.type == SDL_QUIT))// || counter > counter_max)
-            {
-                quit = true;
+            // Get SDL events for joypad input and menu items
+            quit = ProcessSDLEvents(SDL_GB_window_event, CPU);
+
+            // Quit if X has been clicked            
+            if (quit)// || ++counter > counter_max)
                 break;
-            }
         }
 
         // Check again to quit outside of main game loop to avoid lag
@@ -129,17 +138,36 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
+/* Function: bool ProcessInputs(SDL_Event & event, GBCPU & CPU)
+             Parses keyboard inputs in order to relay
+             it over to JOYPAD_P1 register in memory. 
+             
+             Also handles non-emulator functions such as 
+             quitting and the menu system.*/
+bool ProcessSDLEvents(SDL_Event & SDL_GB_window_event, GBCPU & CPU)
+{
+    // Poll event
+    SDL_PollEvent(&SDL_GB_window_event);
+
+    // Quit if X has been clicked            
+    if (SDL_GB_window_event.type == SDL_QUIT)
+        return true;
+
+    // Indicate no quit has been requested (via click on 'X' or Alt-F4)
+    return false;
+}
+
 void CheckInterrupts(GBCPU & CPU)
 {
-	/* @TODO: Optimization/Cleanup of CheckInterrupts:
+    /* @TODO: Optimization/Cleanup of CheckInterrupts:
               1) Change interrupt routine locations to macros
-			  2) Move function to interrupts.c (within CPU folder) */
+              2) Move function to interrupts.c (within CPU folder) */
     // Only process interrupts if Interrupt Master Enable Flag is TRUE
     if (CPU.IME == false)
         return;
 
-    byte interrupt_enable = CPU.readByte(INTERRUPT_ENABLE);
-    byte interrupt_req = CPU.readByte(INTERRUPT_FLAG);
+    BYTE interrupt_enable = CPU.readByte(INTERRUPT_ENABLE);
+    BYTE interrupt_req = CPU.readByte(INTERRUPT_FLAG);
 
     // Check for the interrupt requests with the highest priority, only if enabled
     if ((interrupt_enable & 0x01) &&  // V-Blank
@@ -155,7 +183,7 @@ void CheckInterrupts(GBCPU & CPU)
         --CPU.SP;
         CPU.writeByte(((CPU.PC) & 0x00FF), CPU.SP);
 
-		/*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
+        /*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
         CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;*/
 
         CPU.PC = 0x0040;
@@ -192,7 +220,7 @@ void CheckInterrupts(GBCPU & CPU)
         --CPU.SP;
         CPU.writeByte(((CPU.PC) & 0x00FF), CPU.SP);
 
-		/*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
+        /*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
         CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;*/
 
         CPU.PC = 0x0050;
@@ -210,7 +238,7 @@ void CheckInterrupts(GBCPU & CPU)
         --CPU.SP;
         CPU.writeByte(((CPU.PC) & 0x00FF), CPU.SP);
 
-		/*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
+        /*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
         CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;*/
 
         CPU.PC = 0x0058;
@@ -228,7 +256,7 @@ void CheckInterrupts(GBCPU & CPU)
         --CPU.SP;
         CPU.writeByte(((CPU.PC) & 0x00FF), CPU.SP);
 
-		/*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
+        /*CPU.MEM[CPU.SP] = ((CPU.PC) & 0x00FF); --CPU.SP;
         CPU.MEM[CPU.SP] = ((CPU.PC) >> 8); --CPU.SP;*/
 
         CPU.PC = 0x0060;
@@ -237,7 +265,7 @@ void CheckInterrupts(GBCPU & CPU)
     return;
 }
 
-void UpdateTimer(byte cycles, GBCPU & CPU)
+void UpdateTimer(BYTE cycles, GBCPU & CPU)
 {
     /* @TODO: Optimize/clean up UpdateTimer function:
               1) Clean up macro names to be consistent with GBCPU docs
@@ -385,7 +413,7 @@ void UpdateTimer(byte cycles, GBCPU & CPU)
     return;
 }
 
-void UpdateDIV(byte cycles, GBCPU & CPU)
+void UpdateDIV(BYTE cycles, GBCPU & CPU)
 {
     // If we've counted up enough GB cycles at the DIV counter rate (16384 Hz), 
     // we need to count 4.194304 MHz / 16384 Hz = 256 times to increment the counter

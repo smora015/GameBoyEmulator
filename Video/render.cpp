@@ -1,8 +1,15 @@
-﻿#include "render.h"
-#include <stdio.h>
+﻿/*  Name:        render.cpp
+    Author:      Sergio Morales [sergiomorales.me]
+    Created:     October 19th, 2016
+    Modified:    September 12th, 2018
+    Description: This file contains the logic to initialize and begin execution
+                 of the Gameboy emulator. */
+
+#include "render.h"
+
 
 // Pixel Buffer follows the Alpha-Red-Green-Blue format for SDL texture to render copying
-byte pixel_buffer[144][160][4]; // 144 px tall, 160 px wide, 4-bytes for color
+BYTE pixel_buffer[144][160][4]; // 144 px tall, 160 px wide, 4-bytes for color
 
 
 // Renders the Nintendo scrolling graphic
@@ -24,7 +31,7 @@ void getIntroScreen(GBCPU cpu)
     }
 
     // Populate a map of the Nintendo logo for rendering
-    byte logo_map[12][4];
+    BYTE logo_map[12][4];
     unsigned short index = 0x104; // Beginning of logo in memory
 
     // Y axis
@@ -48,7 +55,7 @@ void getIntroScreen(GBCPU cpu)
         for (int x = 0; x < 12; ++x)
         {
             // Get the byte at current location
-            byte data = logo_map[x][y];
+            BYTE data = logo_map[x][y];
             //pixel temp;
 
             // Render upper nibble
@@ -85,7 +92,7 @@ void getIntroScreen(GBCPU cpu)
         for (int x = 0; x < 12; ++x)
         {
             // Get the byte at current location
-            byte data = logo_map[x][y];
+            BYTE data = logo_map[x][y];
             //pixel temp;
 
             // Render lower nibble

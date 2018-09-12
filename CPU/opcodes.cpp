@@ -1,23 +1,22 @@
-/*
-    Name:        opcodes.cpp
-    Author:      Sergio Morales
-    Date:        08/30/2016
+/*  Name:        opcodes.cpp
+    Author:      Sergio Morales [sergiomorales.me]
+    Created:     August 30th, 2016
+    Modified:    September 12th, 2018
     Description: This file contains the definitions for every opcode and
                  prefix-CB opcode used in the GameBoy CPU.            
     
 */
 #include "GBCPU.h"
-#include "gameboy.h"
 
 // ADD A, n
-inline void GBCPU::ADD(byte & reg, byte arg)
+inline void GBCPU::ADD(BYTE & reg, BYTE arg)
 {
     // TODO: remove reg parameter, as this will always be A...
     // Reset N flag
     SUBTRACT_FLAG = false;
 
-    word begin = A;
-    word result = A + arg;
+    WORD begin = A;
+    WORD result = A + arg;
 
     // Detect half carry
     if ((result & 0x0F) < (begin & 0x0F))
@@ -30,14 +29,14 @@ inline void GBCPU::ADD(byte & reg, byte arg)
     else
         CARRY_FLAG = false;
 
-    reg = (byte) (result & 0xFF);
+    reg = (BYTE) (result & 0xFF);
 
     // Detect zero
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
 // ADDC A, n
-inline void GBCPU::ADDC(byte arg)
+inline void GBCPU::ADDC(BYTE arg)
 {
     //printf("PC: $%04X OPCODE: %02X AF: 0x%02X%02X BC: 0x%02X%02X DE: 0x%02X%02X HL: 0x%02X%02X SP: 0x%04X \n", PC, MEM[PC], A, GetF(), B, C, D, E, H, L, SP);
 
@@ -45,11 +44,11 @@ inline void GBCPU::ADDC(byte arg)
     SUBTRACT_FLAG = false;
 
     // Prevent missingc carry bits from adding 8-bit values
-    word reg = A;
-    word add = arg;
+    WORD reg = A;
+    WORD add = arg;
 
-    word begin = reg;
-    word result = reg + add + ((CARRY_FLAG == true) ? 0x01 : 0x00);
+    WORD begin = reg;
+    WORD result = reg + add + ((CARRY_FLAG == true) ? 0x01 : 0x00);
 
     // Detect half carry
     if ((result & 0x0F) < (begin & 0x0F))
@@ -62,7 +61,7 @@ inline void GBCPU::ADDC(byte arg)
     else
         CARRY_FLAG = false;
 
-    A = (byte)(result & 0xFF);
+    A = (BYTE)(result & 0xFF);
 
     // Detect zero
     ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
@@ -72,9 +71,9 @@ inline void GBCPU::ADDC(byte arg)
 }
 
 // ADD HL, n
-inline void GBCPU::ADD(word arg)
+inline void GBCPU::ADD(WORD arg)
 {
-    word HL = GetHL();
+    WORD HL = GetHL();
 
     // Reset N flag
     SUBTRACT_FLAG = false;
@@ -99,7 +98,7 @@ inline void GBCPU::ADD(word arg)
 // ADD SP, n
 inline void GBCPU::ADDSP()
 {
-    signed_byte arg = signed_byte(readImmByte());
+    SIGNED_BYTE arg = SIGNED_BYTE(readImmByte());
 
     // Reset Z, N flag
     SUBTRACT_FLAG = false;
@@ -120,7 +119,7 @@ inline void GBCPU::ADDSP()
     SP += arg;
 }
 
-inline void GBCPU::SUB(byte & reg, byte arg)
+inline void GBCPU::SUB(BYTE & reg, BYTE arg)
 {
     // Set N falg
     SUBTRACT_FLAG = true;
@@ -144,17 +143,17 @@ inline void GBCPU::SUB(byte & reg, byte arg)
 }
 
 // SUBC A, n
-inline void GBCPU::SUBC(byte arg)
+inline void GBCPU::SUBC(BYTE arg)
 {
     // Reset N flag
     SUBTRACT_FLAG = true;
 
     // Prevent missingc carry bits from adding 8-bit values
-    word reg = A;
-    word sub = arg;
+    WORD reg = A;
+    WORD sub = arg;
 
-    word begin = reg;
-    word result = reg - sub + ((CARRY_FLAG == true) ? 0x0001 : 0x0000);
+    WORD begin = reg;
+    WORD result = reg - sub + ((CARRY_FLAG == true) ? 0x0001 : 0x0000);
 
     // Detect no borrow
     if ((result & 0x0F) > (begin & 0x0F))
@@ -167,13 +166,13 @@ inline void GBCPU::SUBC(byte arg)
     else
         CARRY_FLAG = false;
 
-    A = (byte)(result & 0xFF);
+    A = (BYTE)(result & 0xFF);
 
     // Detect zero
     ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
-inline void GBCPU::AND(byte & reg, byte arg)
+inline void GBCPU::AND(BYTE & reg, BYTE arg)
 {
     // Reset N, C flag
     SUBTRACT_FLAG = false;
@@ -188,7 +187,7 @@ inline void GBCPU::AND(byte & reg, byte arg)
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);  
 }
 
-inline void GBCPU::OR(byte & reg, byte arg)
+inline void GBCPU::OR(BYTE & reg, BYTE arg)
 {
     // Reset N, H, and C flag
     SUBTRACT_FLAG = false;
@@ -201,7 +200,7 @@ inline void GBCPU::OR(byte & reg, byte arg)
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
-inline void GBCPU::XOR(byte & reg, byte arg)
+inline void GBCPU::XOR(BYTE & reg, BYTE arg)
 {
     // Reset N, H, and C flag
     SUBTRACT_FLAG = false;
@@ -214,12 +213,12 @@ inline void GBCPU::XOR(byte & reg, byte arg)
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
-inline void GBCPU::CP(byte & reg, byte arg)
+inline void GBCPU::CP(BYTE & reg, BYTE arg)
 {
     // Set N falg
     SUBTRACT_FLAG = true;
 
-    byte result = reg - arg; // A - n
+    BYTE result = reg - arg; // A - n
 
     // Detect half carry
     if ((result & 0x0F) > (reg & 0x0F))
@@ -236,7 +235,7 @@ inline void GBCPU::CP(byte & reg, byte arg)
     ((result & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
-inline void GBCPU::INCR(byte & reg)
+inline void GBCPU::INCR(BYTE & reg)
 {
     // Reset N flag
     SUBTRACT_FLAG = false;
@@ -253,7 +252,7 @@ inline void GBCPU::INCR(byte & reg)
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
-inline void GBCPU::DECR(byte & reg)
+inline void GBCPU::DECR(BYTE & reg)
 {
     // Set N flag
     SUBTRACT_FLAG = true;
@@ -270,7 +269,7 @@ inline void GBCPU::DECR(byte & reg)
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
-inline void GBCPU::SWAP(byte & reg)
+inline void GBCPU::SWAP(BYTE & reg)
 {
     // Clear N, H, C
     SUBTRACT_FLAG = false;
@@ -286,7 +285,7 @@ inline void GBCPU::SWAP(byte & reg)
 // Decimal Adjust Register A. This Opcode is still a mystery to me and has been taken from forums, sites, etc.
 inline void GBCPU::DAA()
 {
-    byte temp = A;
+    BYTE temp = A;
 
     // Adjust the binary decimal digits if we have a N and C or H flag
     if (SUBTRACT_FLAG == true)
@@ -357,7 +356,7 @@ inline void GBCPU::RLCA()
 }
 
 // Rotate n left
-inline void GBCPU::RLC(byte & reg)
+inline void GBCPU::RLC(BYTE & reg)
 {
     // Reset N and H flag
     SUBTRACT_FLAG = false;
@@ -403,7 +402,7 @@ inline void GBCPU::RLA()
 }
 
 // Rotate n left with carry
-inline void GBCPU::RL(byte & reg)
+inline void GBCPU::RL(BYTE & reg)
 {
     // Reset N and H flag
     SUBTRACT_FLAG = false;
@@ -450,7 +449,7 @@ inline void GBCPU::RRCA()
 }
 
 // Rotate n right
-inline void GBCPU::RRC(byte & reg)
+inline void GBCPU::RRC(BYTE & reg)
 {
     // Reset N and H flag
     SUBTRACT_FLAG = false;
@@ -496,7 +495,7 @@ inline void GBCPU::RRA()
 }
 
 // Rotate n right through carry
-inline void GBCPU::RR(byte & reg)
+inline void GBCPU::RR(BYTE & reg)
 {
     // Reset N and H flag
     SUBTRACT_FLAG = false;
@@ -521,7 +520,7 @@ inline void GBCPU::RR(byte & reg)
 }
 
 // SLA n
-inline void GBCPU::SLA(byte & reg)
+inline void GBCPU::SLA(BYTE & reg)
 {
     // reset N and H
     SUBTRACT_FLAG = false;
@@ -544,7 +543,7 @@ inline void GBCPU::SLA(byte & reg)
 }
 
 // SRA n
-inline void GBCPU::SRA(byte & reg)
+inline void GBCPU::SRA(BYTE & reg)
 {
     // reset N and H
     SUBTRACT_FLAG = false;
@@ -567,7 +566,7 @@ inline void GBCPU::SRA(byte & reg)
 }
 
 // SRL n
-inline void GBCPU::SRL(byte & reg)
+inline void GBCPU::SRL(BYTE & reg)
 {
     // reset N and H
     SUBTRACT_FLAG = false;
@@ -590,7 +589,7 @@ inline void GBCPU::SRL(byte & reg)
 }
 
 // BIT b,r
-inline void GBCPU::BIT(byte bit, byte & reg)
+inline void GBCPU::BIT(BYTE bit, BYTE & reg)
 {
     // Reset N flag
     SUBTRACT_FLAG = false;
@@ -614,7 +613,7 @@ inline void GBCPU::JP()
 inline void GBCPU::JR()
 {
     // Get the immediate byte
-    signed_byte n = readImmByte();
+    SIGNED_BYTE n = readImmByte();
 
     // Add the immediate byte (n) to the current PC (after this instruction so we add 2)
     PC += n + 2;
@@ -634,7 +633,7 @@ inline void GBCPU::CALL()
 }
 
 // RESET
-inline void GBCPU::RST(byte n)
+inline void GBCPU::RST(BYTE n)
 {
     printf("RST called at %X!\n", n);
     // Push the address of the current instruction onto the stack
@@ -648,8 +647,8 @@ inline void GBCPU::RST(byte n)
 inline void GBCPU::RET()
 {
     // Get the immediate instruction
-    byte lsb;
-    byte msb;
+    BYTE lsb;
+    BYTE msb;
 
     // Pop the address of the next instruction from the stack
     POP(msb, lsb);
@@ -666,7 +665,7 @@ CPU Opcode Execution Instruction Macros
 void GBCPU::OP00() { /*cout << "NOP" << endl;*/ ++PC; cycles = 4; }             // NOP
 void GBCPU::OP01() { SetBC( readImmWord() ); PC += 3; cycles = 12; }            // LD BC, ##
 void GBCPU::OP02() { writeByte(A, GetBC()); ++PC; cycles = 8; }                 // LD (BC), A
-void GBCPU::OP03() { word temp = GetBC() + 1; SetBC(temp); ++PC; cycles = 8; }  // INC BC
+void GBCPU::OP03() { WORD temp = GetBC() + 1; SetBC(temp); ++PC; cycles = 8; }  // INC BC
 void GBCPU::OP04() { INCR(B); ++PC; cycles = 4; }                               // INC B
 void GBCPU::OP05() { DECR(B); ++PC; cycles = 4; }                               // DEC B
 void GBCPU::OP06() { B = readImmByte(); PC += 2; cycles = 8; }                  // LD B, #
@@ -674,7 +673,7 @@ void GBCPU::OP07() { RLCA(); ++PC; cycles = 4; }                                
 void GBCPU::OP08() { writeWord(SP, readImmWord()); PC += 3; cycles = 20; }      // LD (SP), ##
 void GBCPU::OP09() { ADD(GetBC()); ++PC; cycles = 8; }                          // ADD HL, BC
 void GBCPU::OP0A() { A = readByte(GetBC()); ++PC; cycles = 8; }                 // LD A, (BC)
-void GBCPU::OP0B() { word temp = GetBC() - 1; SetBC(temp);  ++PC; cycles = 8; } // DEC BC
+void GBCPU::OP0B() { WORD temp = GetBC() - 1; SetBC(temp);  ++PC; cycles = 8; } // DEC BC
 void GBCPU::OP0C() { INCR(C); ++PC; cycles = 4; }                               // INC C
 void GBCPU::OP0D() { DECR(C); ++PC; cycles = 4; }                               // DEC C
 void GBCPU::OP0E() { C = readImmByte(); PC += 2; cycles = 8; }                  // LD C, #
@@ -683,7 +682,7 @@ void GBCPU::OP0F() { RRCA(); ++PC; cycles = 4; }                                
 void GBCPU::OP10() { ++PC; cycles = 4; cout << "HALT!" << endl;                 /* TODO: HALT CPU and LCD display until button pressed */ } // STOP
 void GBCPU::OP11() { SetDE( readImmWord() ); PC += 3; cycles = 12; }            // LD DE, ##
 void GBCPU::OP12() { writeByte(A, GetDE()); ++PC; cycles = 8; }                 // LD (DE), A
-void GBCPU::OP13() { word temp = GetDE() + 1; SetDE(temp); ++PC; cycles = 8; }  // INC DE
+void GBCPU::OP13() { WORD temp = GetDE() + 1; SetDE(temp); ++PC; cycles = 8; }  // INC DE
 void GBCPU::OP14() { INCR(D); ++PC; cycles = 4; }                               // INC D
 void GBCPU::OP15() { DECR(D); ++PC; cycles = 4; }                               // DEC D
 void GBCPU::OP16() { D = readImmByte(); PC += 2; cycles = 8; }                  // LD A, #
@@ -691,7 +690,7 @@ void GBCPU::OP17() { RLA(); ++PC; cycles = 4; }                                 
 void GBCPU::OP18() { JR(); cycles = 8; }                                        // JR
 void GBCPU::OP19() { ADD(GetDE()); ++PC; cycles = 8; }                          // ADD HL, DE
 void GBCPU::OP1A() { A = readByte(GetDE()); ++PC; cycles = 8; }                 // LD A, (DE)
-void GBCPU::OP1B() { word temp = GetDE() - 1; SetDE(temp); ++PC; cycles = 8; }  // DEC DE
+void GBCPU::OP1B() { WORD temp = GetDE() - 1; SetDE(temp); ++PC; cycles = 8; }  // DEC DE
 void GBCPU::OP1C() { INCR(E); ++PC; cycles = 4; }                               // INC E
 void GBCPU::OP1D() { DECR(E); ++PC; cycles = 4; }                               // DEC E
 void GBCPU::OP1E() { E = readImmByte(); PC += 2; cycles = 8; }                  // LD E, #
@@ -700,7 +699,7 @@ void GBCPU::OP1F() { RRA(); ++PC; cycles = 4; }                                 
 void GBCPU::OP20() { if (ZERO_FLAG == false) JR(); else PC += 2; cycles = 8; }  // JR NZ
 void GBCPU::OP21() { SetHL(readImmWord()); PC += 3; cycles = 12; }              // LD HL, ##
 void GBCPU::OP22() { writeByte(A, GetHL()); INC(H, L); ++PC; cycles = 8; }      // LD (HL++), A
-void GBCPU::OP23() { word temp = GetHL() + 1; SetHL(temp); ++PC; cycles = 8; }  // INC HL
+void GBCPU::OP23() { WORD temp = GetHL() + 1; SetHL(temp); ++PC; cycles = 8; }  // INC HL
 void GBCPU::OP24() { INCR(H); ++PC; cycles = 4; }                               // INC H
 void GBCPU::OP25() { DECR(H); ++PC; cycles = 4; }                               // DEC H
 void GBCPU::OP26() { H = readImmByte(); PC += 2; cycles = 8; }                  // LD H, #
@@ -708,7 +707,7 @@ void GBCPU::OP27() { DAA(); ++PC; cycles = 4; }                                 
 void GBCPU::OP28() { if (ZERO_FLAG == true) JR(); else PC += 2; cycles = 8; }   // JR z
 void GBCPU::OP29() { ADD(GetHL()); ++PC; cycles = 8; }                          // ADD HL, HL
 void GBCPU::OP2A() { A = readByte(GetHL()); INC(H, L); ++PC; cycles = 8; }      // LD A, (HL++)
-void GBCPU::OP2B() { word temp = GetHL() - 1; SetHL(temp); ++PC; cycles = 8; }  // DEC HL
+void GBCPU::OP2B() { WORD temp = GetHL() - 1; SetHL(temp); ++PC; cycles = 8; }  // DEC HL
 void GBCPU::OP2C() { INCR(L); ++PC; cycles = 4; }                               // INC L
 void GBCPU::OP2D() { DECR(L); ++PC; cycles = 4; }                               // DEC L
 void GBCPU::OP2E() { L = readImmByte(); PC += 2; cycles = 8; }                  // LD L, #
@@ -719,8 +718,8 @@ void GBCPU::OP30() { if (CARRY_FLAG == false) JR(); else PC += 2; cycles = 8; } 
 void GBCPU::OP31() { SP = readImmWord(); PC += 3; cycles = 12; }                                                 // LD SP, ##
 void GBCPU::OP32() { writeByte(A, GetHL()); DEC(H, L); ++PC; cycles = 8; }                                       // LD (HL--), A
 void GBCPU::OP33() { ++SP; ++PC; cycles = 8; }                                                                   // INC SP
-void GBCPU::OP34() { byte t = readByte(GetHL()); INCR(t); writeByte(t, GetHL()); ++PC; cycles = 12; }            // INC (HL)
-void GBCPU::OP35() { byte t = readByte(GetHL()); DECR(t); writeByte(t, GetHL()); ++PC; cycles = 12; }            // DEC (HL)
+void GBCPU::OP34() { BYTE t = readByte(GetHL()); INCR(t); writeByte(t, GetHL()); ++PC; cycles = 12; }            // INC (HL)
+void GBCPU::OP35() { BYTE t = readByte(GetHL()); DECR(t); writeByte(t, GetHL()); ++PC; cycles = 12; }            // DEC (HL)
 void GBCPU::OP36() { writeByte(readImmByte(), GetHL()); PC += 2; cycles = 12; }                                  // LD (HL), #
 void GBCPU::OP37() { CARRY_FLAG = true; SUBTRACT_FLAG = false; HALF_CARRY_FLAG = false; ++PC; cycles = 4; }      // SCF
 void GBCPU::OP38() { if (CARRY_FLAG == true) JR(); else PC += 2; cycles = 8; }                                   // JR, c
@@ -935,7 +934,7 @@ void GBCPU::OPEF() { RST(0x28); cycles = 32; }
 
 void GBCPU::OPF0() { /*printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + readImmByte()], 0xFF00 + readImmByte());*/ A = readByte(0xFF00 + readImmByte()); PC += 2; cycles = 12; } // LD A, ($FF00 + #)
 void GBCPU::OPF1() { //SetAF(readWord(SP+1)); SP += 2;
-                     byte temp = 0x00; POP(A, temp); SetF(temp); 
+                     BYTE temp = 0x00; POP(A, temp); SetF(temp); 
                      ++PC; cycles = 12; }
 void GBCPU::OPF2() { /*printf("Loading %X onto A from address %X!\n", MEM[0xFF00 + C], 0xF00 + C);*/ A = readByte(0xFF00 + C); ++PC; cycles = 8; } // LD A, ($FF00 + C)
 void GBCPU::OPF3() { IME = false; ++PC; cycles = 4; }                     // DI
@@ -945,10 +944,10 @@ void GBCPU::OPF5() { //SP -= 2; writeWord(GetAF(), SP);
                      ++PC; cycles = 16; }
 void GBCPU::OPF6() { OR(A, readImmByte() ); PC += 2;  cycles = 8; }
 void GBCPU::OPF7() { RST(0x30); cycles = 32; }
-void GBCPU::OPF8() { SetHL( word(SP + (signed_byte)readImmByte()) ); SUBTRACT_FLAG = false; ZERO_FLAG = false; 
+void GBCPU::OPF8() { SetHL( WORD(SP + (SIGNED_BYTE)readImmByte()) ); SUBTRACT_FLAG = false; ZERO_FLAG = false; 
                      // Detect half carry and carry
-                     (((SP & 0x0F) +  ((signed_byte)readImmByte() & 0x0F)) & 0x10)  ? HALF_CARRY_FLAG = true : HALF_CARRY_FLAG = false;
-                     (((SP & 0x0FF) + ((signed_byte)readImmByte() & 0xFF)) & 0x100) ? CARRY_FLAG = true : CARRY_FLAG = false; 
+                     (((SP & 0x0F) +  ((SIGNED_BYTE)readImmByte() & 0x0F)) & 0x10)  ? HALF_CARRY_FLAG = true : HALF_CARRY_FLAG = false;
+                     (((SP & 0x0FF) + ((SIGNED_BYTE)readImmByte() & 0xFF)) & 0x100) ? CARRY_FLAG = true : CARRY_FLAG = false; 
                      PC += 2; cycles = 12; }                                                                                               // LD HL SP, n
 void GBCPU::OPF9() { SP = GetHL(); ++PC; cycles = 8; }                                                                                     // LD SP, HL
 void GBCPU::OPFA() { A = readByte(readImmWord()); PC += 3; cycles = 16; } // LD A, (##)
@@ -967,7 +966,7 @@ void GBCPU::CBOP02() { RLC(D); PC += 2; cycles = 8; }
 void GBCPU::CBOP03() { RLC(E); PC += 2; cycles = 8; }
 void GBCPU::CBOP04() { RLC(H); PC += 2; cycles = 8; }
 void GBCPU::CBOP05() { RLC(L); PC += 2; cycles = 8; }
-void GBCPU::CBOP06() { byte temp = readByte(GetHL()); RLC(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP06() { BYTE temp = readByte(GetHL()); RLC(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP07() { RLC(A); PC += 2; cycles = 8; }
 void GBCPU::CBOP08() { RRC(B); PC += 2; cycles = 8; }
 void GBCPU::CBOP09() { RRC(C); PC += 2; cycles = 8; }
@@ -975,7 +974,7 @@ void GBCPU::CBOP0A() { RRC(D); PC += 2; cycles = 8; }
 void GBCPU::CBOP0B() { RRC(E); PC += 2; cycles = 8; }
 void GBCPU::CBOP0C() { RRC(H); PC += 2; cycles = 8; }
 void GBCPU::CBOP0D() { RRC(L); PC += 2; cycles = 8; }
-void GBCPU::CBOP0E() { byte temp = readByte(GetHL()); RRC(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP0E() { BYTE temp = readByte(GetHL()); RRC(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP0F() { RRC(A); PC += 2; cycles = 8; }
 
 void GBCPU::CBOP10() { RL(B); PC += 2; cycles = 8; }
@@ -984,7 +983,7 @@ void GBCPU::CBOP12() { RL(D); PC += 2; cycles = 8; }
 void GBCPU::CBOP13() { RL(E); PC += 2; cycles = 8; }
 void GBCPU::CBOP14() { RL(H); PC += 2; cycles = 8; }
 void GBCPU::CBOP15() { RL(L); PC += 2; cycles = 8; }
-void GBCPU::CBOP16() { byte temp = readByte(GetHL()); RL(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP16() { BYTE temp = readByte(GetHL()); RL(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP17() { RL(A); PC += 2; cycles = 8; }
 void GBCPU::CBOP18() { RR(B); PC += 2; cycles = 8; }
 void GBCPU::CBOP19() { RR(C); PC += 2; cycles = 8; }
@@ -992,7 +991,7 @@ void GBCPU::CBOP1A() { RR(D); PC += 2; cycles = 8; }
 void GBCPU::CBOP1B() { RR(E); PC += 2; cycles = 8; }
 void GBCPU::CBOP1C() { RR(H); PC += 2; cycles = 8; }
 void GBCPU::CBOP1D() { RR(L); PC += 2; cycles = 8; }
-void GBCPU::CBOP1E() { byte temp = readByte(GetHL()); RR(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP1E() { BYTE temp = readByte(GetHL()); RR(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP1F() { RR(A); PC += 2; cycles = 8; }
 
 void GBCPU::CBOP20() { SLA(B); PC += 2; cycles = 8; }
@@ -1001,7 +1000,7 @@ void GBCPU::CBOP22() { SLA(D); PC += 2; cycles = 8; }
 void GBCPU::CBOP23() { SLA(E); PC += 2; cycles = 8; }
 void GBCPU::CBOP24() { SLA(H); PC += 2; cycles = 8; }
 void GBCPU::CBOP25() { SLA(L); PC += 2; cycles = 8; }
-void GBCPU::CBOP26() { byte temp = readByte(GetHL()); SLA(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP26() { BYTE temp = readByte(GetHL()); SLA(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP27() { SLA(A); PC += 2; cycles = 8; }
 void GBCPU::CBOP28() { SRA(B); PC += 2; cycles = 8; }
 void GBCPU::CBOP29() { SRA(C); PC += 2; cycles = 8; }
@@ -1009,7 +1008,7 @@ void GBCPU::CBOP2A() { SRA(D); PC += 2; cycles = 8; }
 void GBCPU::CBOP2B() { SRA(E); PC += 2; cycles = 8; }
 void GBCPU::CBOP2C() { SRA(H); PC += 2; cycles = 8; }
 void GBCPU::CBOP2D() { SRA(L); PC += 2; cycles = 8; }
-void GBCPU::CBOP2E() { byte temp = readByte(GetHL()); SRA(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP2E() { BYTE temp = readByte(GetHL()); SRA(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP2F() { SRA(A); PC += 2; cycles = 8; }
 
 void GBCPU::CBOP30() { SWAP(B); PC += 2; cycles = 8; }
@@ -1018,7 +1017,7 @@ void GBCPU::CBOP32() { SWAP(D); PC += 2; cycles = 8; }
 void GBCPU::CBOP33() { SWAP(E); PC += 2; cycles = 8; }
 void GBCPU::CBOP34() { SWAP(H); PC += 2; cycles = 8; }
 void GBCPU::CBOP35() { SWAP(L); PC += 2; cycles = 8; }
-void GBCPU::CBOP36() { byte temp = readByte(GetHL()); SWAP(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP36() { BYTE temp = readByte(GetHL()); SWAP(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP37() { SWAP(A); PC += 2; cycles = 8; }
 void GBCPU::CBOP38() { SRL(B); PC += 2; cycles = 8; }
 void GBCPU::CBOP39() { SRL(C); PC += 2; cycles = 8; }
@@ -1026,7 +1025,7 @@ void GBCPU::CBOP3A() { SRL(D); PC += 2; cycles = 8; }
 void GBCPU::CBOP3B() { SRL(E); PC += 2; cycles = 8; }
 void GBCPU::CBOP3C() { SRL(H); PC += 2; cycles = 8; }
 void GBCPU::CBOP3D() { SRL(L); PC += 2; cycles = 8; }
-void GBCPU::CBOP3E() { byte temp = readByte(GetHL()); SRL(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP3E() { BYTE temp = readByte(GetHL()); SRL(temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP3F() { SRL(A); PC += 2; cycles = 8; }
 
 void GBCPU::CBOP40() { BIT(0, B); PC += 2; cycles = 8; }
@@ -1035,7 +1034,7 @@ void GBCPU::CBOP42() { BIT(0, D); PC += 2; cycles = 8; }
 void GBCPU::CBOP43() { BIT(0, E); PC += 2; cycles = 8; }
 void GBCPU::CBOP44() { BIT(0, H); PC += 2; cycles = 8; }
 void GBCPU::CBOP45() { BIT(0, L); PC += 2; cycles = 8; }
-void GBCPU::CBOP46() { byte temp = readByte(GetHL()); BIT(0, temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP46() { BYTE temp = readByte(GetHL()); BIT(0, temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP47() { BIT(0, A); PC += 2; cycles = 8; }
 void GBCPU::CBOP48() { BIT(1, B); PC += 2; cycles = 8; }
 void GBCPU::CBOP49() { BIT(1, C); PC += 2; cycles = 8; }
@@ -1043,7 +1042,7 @@ void GBCPU::CBOP4A() { BIT(1, D); PC += 2; cycles = 8; }
 void GBCPU::CBOP4B() { BIT(1, E); PC += 2; cycles = 8; }
 void GBCPU::CBOP4C() { BIT(1, H); PC += 2; cycles = 8; }
 void GBCPU::CBOP4D() { BIT(1, L); PC += 2; cycles = 8; }
-void GBCPU::CBOP4E() { byte temp = readByte(GetHL()); BIT(1, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
+void GBCPU::CBOP4E() { BYTE temp = readByte(GetHL()); BIT(1, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
 void GBCPU::CBOP4F() { BIT(1, A); PC += 2; cycles = 8; }
 
 void GBCPU::CBOP50() { BIT(2, B); PC += 2; cycles = 8; }
@@ -1052,7 +1051,7 @@ void GBCPU::CBOP52() { BIT(2, D); PC += 2; cycles = 8; }
 void GBCPU::CBOP53() { BIT(2, E); PC += 2; cycles = 8; }
 void GBCPU::CBOP54() { BIT(2, H); PC += 2; cycles = 8; }
 void GBCPU::CBOP55() { BIT(2, L); PC += 2; cycles = 8; }
-void GBCPU::CBOP56() { byte temp = readByte(GetHL()); BIT(2, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
+void GBCPU::CBOP56() { BYTE temp = readByte(GetHL()); BIT(2, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
 void GBCPU::CBOP57() { BIT(2, A); PC += 2; cycles = 8; }
 void GBCPU::CBOP58() { BIT(3, B); PC += 2; cycles = 8; }
 void GBCPU::CBOP59() { BIT(3, C); PC += 2; cycles = 8; }
@@ -1060,7 +1059,7 @@ void GBCPU::CBOP5A() { BIT(3, D); PC += 2; cycles = 8; }
 void GBCPU::CBOP5B() { BIT(3, E); PC += 2; cycles = 8; }
 void GBCPU::CBOP5C() { BIT(3, H); PC += 2; cycles = 8; }
 void GBCPU::CBOP5D() { BIT(3, L); PC += 2; cycles = 8; }
-void GBCPU::CBOP5E() { byte temp = readByte(GetHL()); BIT(3, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
+void GBCPU::CBOP5E() { BYTE temp = readByte(GetHL()); BIT(3, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
 void GBCPU::CBOP5F() { BIT(3, A); PC += 2; cycles = 8; }
 
 void GBCPU::CBOP60() { BIT(4, B); PC += 2; cycles = 8; }
@@ -1069,7 +1068,7 @@ void GBCPU::CBOP62() { BIT(4, D); PC += 2; cycles = 8; }
 void GBCPU::CBOP63() { BIT(4, E); PC += 2; cycles = 8; }
 void GBCPU::CBOP64() { BIT(4, H); PC += 2; cycles = 8; }
 void GBCPU::CBOP65() { BIT(4, L); PC += 2; cycles = 8; }
-void GBCPU::CBOP66() { byte temp = readByte(GetHL()); BIT(4, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
+void GBCPU::CBOP66() { BYTE temp = readByte(GetHL()); BIT(4, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
 void GBCPU::CBOP67() { BIT(4, A); PC += 2; cycles = 8; }
 void GBCPU::CBOP68() { BIT(5, B); PC += 2; cycles = 8; }
 void GBCPU::CBOP69() { BIT(5, C); PC += 2; cycles = 8; }
@@ -1077,7 +1076,7 @@ void GBCPU::CBOP6A() { BIT(5, D); PC += 2; cycles = 8; }
 void GBCPU::CBOP6B() { BIT(5, E); PC += 2; cycles = 8; }
 void GBCPU::CBOP6C() { BIT(5, H); PC += 2; cycles = 8; }
 void GBCPU::CBOP6D() { BIT(5, L); PC += 2; cycles = 8; }
-void GBCPU::CBOP6E() { byte temp = readByte(GetHL()); BIT(5, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
+void GBCPU::CBOP6E() { BYTE temp = readByte(GetHL()); BIT(5, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
 void GBCPU::CBOP6F() { BIT(5, A); PC += 2; cycles = 8; }
 
 void GBCPU::CBOP70() { BIT(6, B); PC += 2; cycles = 8; }
@@ -1086,7 +1085,7 @@ void GBCPU::CBOP72() { BIT(6, D); PC += 2; cycles = 8; }
 void GBCPU::CBOP73() { BIT(6, E); PC += 2; cycles = 8; }
 void GBCPU::CBOP74() { BIT(6, H); PC += 2; cycles = 8; }
 void GBCPU::CBOP75() { BIT(6, L); PC += 2; cycles = 8; }
-void GBCPU::CBOP76() { byte temp = readByte(GetHL()); BIT(6, temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
+void GBCPU::CBOP76() { BYTE temp = readByte(GetHL()); BIT(6, temp); writeByte(temp, GetHL()); PC += 2; cycles = 16; }
 void GBCPU::CBOP77() { BIT(6, A); PC += 2; cycles = 8; }
 void GBCPU::CBOP78() { BIT(7, B); PC += 2; cycles = 8; }
 void GBCPU::CBOP79() { BIT(7, C); PC += 2; cycles = 8; }
@@ -1094,7 +1093,7 @@ void GBCPU::CBOP7A() { BIT(7, D); PC += 2; cycles = 8; }
 void GBCPU::CBOP7B() { BIT(7, E); PC += 2; cycles = 8; }
 void GBCPU::CBOP7C() { BIT(7, H); PC += 2; cycles = 8; }
 void GBCPU::CBOP7D() { BIT(7, L); PC += 2; cycles = 8; }
-void GBCPU::CBOP7E() { byte temp = readByte(GetHL()); BIT(7, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
+void GBCPU::CBOP7E() { BYTE temp = readByte(GetHL()); BIT(7, temp); writeByte(temp, GetHL());  PC += 2; cycles = 16; }
 void GBCPU::CBOP7F() { BIT(7, A); PC += 2; cycles = 8; }
 
 void GBCPU::CBOP80() { CLRBIT(B, 0); PC += 2; cycles = 8; } // RES
@@ -1103,7 +1102,7 @@ void GBCPU::CBOP82() { CLRBIT(D, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOP83() { CLRBIT(E, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOP84() { CLRBIT(H, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOP85() { CLRBIT(L, 0); PC += 2; cycles = 8; }
-void GBCPU::CBOP86() { byte temp = readByte(GetHL()); CLRBIT(temp, 0); writeByte(temp, GetHL());  PC += 2; cycles = 8; }
+void GBCPU::CBOP86() { BYTE temp = readByte(GetHL()); CLRBIT(temp, 0); writeByte(temp, GetHL());  PC += 2; cycles = 8; }
 void GBCPU::CBOP87() { CLRBIT(A, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOP88() { CLRBIT(B, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOP89() { CLRBIT(C, 1); PC += 2; cycles = 8; }
@@ -1111,7 +1110,7 @@ void GBCPU::CBOP8A() { CLRBIT(D, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOP8B() { CLRBIT(E, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOP8C() { CLRBIT(H, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOP8D() { CLRBIT(L, 1); PC += 2; cycles = 8; }
-void GBCPU::CBOP8E() { byte temp = readByte(GetHL()); CLRBIT(temp, 1); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOP8E() { BYTE temp = readByte(GetHL()); CLRBIT(temp, 1); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOP8F() { CLRBIT(A, 1); PC += 2; cycles = 8; }
 
 void GBCPU::CBOP90() { CLRBIT(B, 2); PC += 2; cycles = 8; }
@@ -1120,7 +1119,7 @@ void GBCPU::CBOP92() { CLRBIT(D, 2); PC += 2; cycles = 8; }
 void GBCPU::CBOP93() { CLRBIT(E, 2); PC += 2; cycles = 8; }
 void GBCPU::CBOP94() { CLRBIT(H, 2); PC += 2; cycles = 8; }
 void GBCPU::CBOP95() { CLRBIT(L, 2); PC += 2; cycles = 8; }
-void GBCPU::CBOP96() { byte temp = readByte(GetHL()); CLRBIT(temp, 2); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOP96() { BYTE temp = readByte(GetHL()); CLRBIT(temp, 2); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOP97() { CLRBIT(A, 2); PC += 2; cycles = 8; }
 void GBCPU::CBOP98() { CLRBIT(B, 3); PC += 2; cycles = 8; }
 void GBCPU::CBOP99() { CLRBIT(C, 3); PC += 2; cycles = 8; }
@@ -1128,7 +1127,7 @@ void GBCPU::CBOP9A() { CLRBIT(D, 3); PC += 2; cycles = 8; }
 void GBCPU::CBOP9B() { CLRBIT(E, 3); PC += 2; cycles = 8; }
 void GBCPU::CBOP9C() { CLRBIT(H, 3); PC += 2; cycles = 8; }
 void GBCPU::CBOP9D() { CLRBIT(L, 3); PC += 2; cycles = 8; }
-void GBCPU::CBOP9E() { byte temp = readByte(GetHL()); CLRBIT(temp, 3); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOP9E() { BYTE temp = readByte(GetHL()); CLRBIT(temp, 3); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOP9F() { CLRBIT(A, 3); PC += 2; cycles = 8; }
 
 void GBCPU::CBOPA0() { CLRBIT(B, 4); PC += 2; cycles = 8; }
@@ -1137,7 +1136,7 @@ void GBCPU::CBOPA2() { CLRBIT(D, 4); PC += 2; cycles = 8; }
 void GBCPU::CBOPA3() { CLRBIT(E, 4); PC += 2; cycles = 8; }
 void GBCPU::CBOPA4() { CLRBIT(H, 4); PC += 2; cycles = 8; }
 void GBCPU::CBOPA5() { CLRBIT(L, 4); PC += 2; cycles = 8; }
-void GBCPU::CBOPA6() { byte temp = readByte(GetHL()); CLRBIT(temp, 4); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPA6() { BYTE temp = readByte(GetHL()); CLRBIT(temp, 4); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPA7() { CLRBIT(A, 4); PC += 2; cycles = 8; }
 void GBCPU::CBOPA8() { CLRBIT(B, 5); PC += 2; cycles = 8; }
 void GBCPU::CBOPA9() { CLRBIT(C, 5); PC += 2; cycles = 8; }
@@ -1145,7 +1144,7 @@ void GBCPU::CBOPAA() { CLRBIT(D, 5); PC += 2; cycles = 8; }
 void GBCPU::CBOPAB() { CLRBIT(E, 5); PC += 2; cycles = 8; }
 void GBCPU::CBOPAC() { CLRBIT(H, 5); PC += 2; cycles = 8; }
 void GBCPU::CBOPAD() { CLRBIT(L, 5); PC += 2; cycles = 8; }
-void GBCPU::CBOPAE() { byte temp = readByte(GetHL()); CLRBIT(temp, 5); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPAE() { BYTE temp = readByte(GetHL()); CLRBIT(temp, 5); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPAF() { CLRBIT(A, 5); PC += 2; cycles = 8; }
 
 void GBCPU::CBOPB0() { CLRBIT(B, 6); PC += 2; cycles = 8; }
@@ -1154,7 +1153,7 @@ void GBCPU::CBOPB2() { CLRBIT(D, 6); PC += 2; cycles = 8; }
 void GBCPU::CBOPB3() { CLRBIT(E, 6); PC += 2; cycles = 8; }
 void GBCPU::CBOPB4() { CLRBIT(H, 6); PC += 2; cycles = 8; }
 void GBCPU::CBOPB5() { CLRBIT(L, 6); PC += 2; cycles = 8; }
-void GBCPU::CBOPB6() { byte temp = readByte(GetHL()); CLRBIT(temp, 6); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPB6() { BYTE temp = readByte(GetHL()); CLRBIT(temp, 6); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPB7() { CLRBIT(A, 6); PC += 2; cycles = 8; }
 void GBCPU::CBOPB8() { CLRBIT(B, 7); PC += 2; cycles = 8; }
 void GBCPU::CBOPB9() { CLRBIT(C, 7); PC += 2; cycles = 8; }
@@ -1162,7 +1161,7 @@ void GBCPU::CBOPBA() { CLRBIT(D, 7); PC += 2; cycles = 8; }
 void GBCPU::CBOPBB() { CLRBIT(E, 7); PC += 2; cycles = 8; }
 void GBCPU::CBOPBC() { CLRBIT(H, 7); PC += 2; cycles = 8; }
 void GBCPU::CBOPBD() { CLRBIT(L, 7); PC += 2; cycles = 8; }
-void GBCPU::CBOPBE() { byte temp = readByte(GetHL()); CLRBIT(temp, 7); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPBE() { BYTE temp = readByte(GetHL()); CLRBIT(temp, 7); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPBF() { CLRBIT(A, 7); PC += 2; cycles = 8; }
 
 void GBCPU::CBOPC0() { SETBIT(B, 0); PC += 2; cycles = 8; } // SET
@@ -1171,7 +1170,7 @@ void GBCPU::CBOPC2() { SETBIT(D, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOPC3() { SETBIT(E, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOPC4() { SETBIT(H, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOPC5() { SETBIT(L, 0); PC += 2; cycles = 8; }
-void GBCPU::CBOPC6() { byte temp = readByte(GetHL());  SETBIT(temp, 0); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPC6() { BYTE temp = readByte(GetHL());  SETBIT(temp, 0); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPC7() { SETBIT(A, 0); PC += 2; cycles = 8; }
 void GBCPU::CBOPC8() { SETBIT(B, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOPC9() { SETBIT(C, 1); PC += 2; cycles = 8; }
@@ -1179,7 +1178,7 @@ void GBCPU::CBOPCA() { SETBIT(D, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOPCB() { SETBIT(E, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOPCC() { SETBIT(H, 1); PC += 2; cycles = 8; }
 void GBCPU::CBOPCD() { SETBIT(L, 1); PC += 2; cycles = 8; }
-void GBCPU::CBOPCE() { byte temp = readByte(GetHL());  SETBIT(temp, 1); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPCE() { BYTE temp = readByte(GetHL());  SETBIT(temp, 1); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPCF() { SETBIT(A, 1); PC += 2; cycles = 8; }
 
 void GBCPU::CBOPD0() { SETBIT(B, 2); PC += 2; cycles = 8; }
@@ -1188,7 +1187,7 @@ void GBCPU::CBOPD2() { SETBIT(D, 2); PC += 2; cycles = 8; }
 void GBCPU::CBOPD3() { SETBIT(E, 2); PC += 2; cycles = 8; }
 void GBCPU::CBOPD4() { SETBIT(H, 2); PC += 2; cycles = 8; }
 void GBCPU::CBOPD5() { SETBIT(L, 2); PC += 2; cycles = 8; }
-void GBCPU::CBOPD6() { byte temp = readByte(GetHL());  SETBIT(temp, 2); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPD6() { BYTE temp = readByte(GetHL());  SETBIT(temp, 2); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPD7() { SETBIT(A, 2); PC += 2; cycles = 8; }
 void GBCPU::CBOPD8() { SETBIT(B, 3); PC += 2; cycles = 8; }
 void GBCPU::CBOPD9() { SETBIT(C, 3); PC += 2; cycles = 8; }
@@ -1196,7 +1195,7 @@ void GBCPU::CBOPDA() { SETBIT(D, 3); PC += 2; cycles = 8; }
 void GBCPU::CBOPDB() { SETBIT(E, 3); PC += 2; cycles = 8; }
 void GBCPU::CBOPDC() { SETBIT(H, 3); PC += 2; cycles = 8; }
 void GBCPU::CBOPDD() { SETBIT(L, 3); PC += 2; cycles = 8; }
-void GBCPU::CBOPDE() { byte temp = readByte(GetHL());  SETBIT(temp, 3); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPDE() { BYTE temp = readByte(GetHL());  SETBIT(temp, 3); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPDF() { SETBIT(A, 3); PC += 2; cycles = 8; }
 
 void GBCPU::CBOPE0() { SETBIT(B, 4); PC += 2; cycles = 8; }
@@ -1205,7 +1204,7 @@ void GBCPU::CBOPE2() { SETBIT(D, 4); PC += 2; cycles = 8; }
 void GBCPU::CBOPE3() { SETBIT(E, 4); PC += 2; cycles = 8; }
 void GBCPU::CBOPE4() { SETBIT(H, 4); PC += 2; cycles = 8; }
 void GBCPU::CBOPE5() { SETBIT(L, 4); PC += 2; cycles = 8; }
-void GBCPU::CBOPE6() { byte temp = readByte(GetHL());  SETBIT(temp, 4); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPE6() { BYTE temp = readByte(GetHL());  SETBIT(temp, 4); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPE7() { SETBIT(A, 4); PC += 2; cycles = 8; }
 void GBCPU::CBOPE8() { SETBIT(B, 5); PC += 2; cycles = 8; }
 void GBCPU::CBOPE9() { SETBIT(C, 5); PC += 2; cycles = 8; }
@@ -1213,7 +1212,7 @@ void GBCPU::CBOPEA() { SETBIT(D, 5); PC += 2; cycles = 8; }
 void GBCPU::CBOPEB() { SETBIT(E, 5); PC += 2; cycles = 8; }
 void GBCPU::CBOPEC() { SETBIT(H, 5); PC += 2; cycles = 8; }
 void GBCPU::CBOPED() { SETBIT(L, 5); PC += 2; cycles = 8; }
-void GBCPU::CBOPEE() { byte temp = readByte(GetHL());  SETBIT(temp, 5); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPEE() { BYTE temp = readByte(GetHL());  SETBIT(temp, 5); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPEF() { SETBIT(A, 5); PC += 2; cycles = 8; }
 
 void GBCPU::CBOPF0() { SETBIT(B, 6); PC += 2; cycles = 8; }
@@ -1222,7 +1221,7 @@ void GBCPU::CBOPF2() { SETBIT(D, 6); PC += 2; cycles = 8; }
 void GBCPU::CBOPF3() { SETBIT(E, 6); PC += 2; cycles = 8; }
 void GBCPU::CBOPF4() { SETBIT(H, 6); PC += 2; cycles = 8; }
 void GBCPU::CBOPF5() { SETBIT(L, 6); PC += 2; cycles = 8; }
-void GBCPU::CBOPF6() { byte temp = readByte(GetHL());  SETBIT(temp, 6); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPF6() { BYTE temp = readByte(GetHL());  SETBIT(temp, 6); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPF7() { SETBIT(A, 6); PC += 2; cycles = 8; }
 void GBCPU::CBOPF8() { SETBIT(B, 7); PC += 2; cycles = 8; }
 void GBCPU::CBOPF9() { SETBIT(C, 7); PC += 2; cycles = 8; }
@@ -1230,5 +1229,5 @@ void GBCPU::CBOPFA() { SETBIT(D, 7); PC += 2; cycles = 8; }
 void GBCPU::CBOPFB() { SETBIT(E, 7); PC += 2; cycles = 8; }
 void GBCPU::CBOPFC() { SETBIT(H, 7); PC += 2; cycles = 8; }
 void GBCPU::CBOPFD() { SETBIT(L, 7); PC += 2; cycles = 8; }
-void GBCPU::CBOPFE() { byte temp = readByte(GetHL());  SETBIT(temp, 7); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
+void GBCPU::CBOPFE() { BYTE temp = readByte(GetHL());  SETBIT(temp, 7); writeByte(temp, GetHL()); PC += 2; cycles = 8; }
 void GBCPU::CBOPFF() { SETBIT(A, 7); PC += 2; cycles = 8; }

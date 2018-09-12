@@ -1,22 +1,21 @@
-/*
-    Name:        GBPPU.cpp
-    Author:      Sergio Morales
-    Date:        10/19/2016
+/*  Name:        GBPPU.cpp
+    Author:      Sergio Morales [sergiomorales.me]
+    Created:     October 19th, 2016
+    Modified:    September 12th, 2018
     Description: This file contains the logic for rendering sprites and
-                 tiles for the GameBoy Picture Processing Unit.
-*/
+                 tiles for the GameBoy Picture Processing Unit. */
+
 #include "GBPPU.h"
-#include "gameboy.h"
-#include "GBCPU.h"
-#include "render.h"
 
 // Counter that keeps track of the number of cycles occured to increment the next scanline
 unsigned short scanline_counter = 0;
 
-// TODO: Utilize palette colors for rendering
-// TODO: Window/Sprite Rendering
 
-void ExecutePPU(byte cycles, GBCPU & CPU)
+/* Function: void ExecutePPU(BYTE cycles, GBCPU & CPU)
+             Executes picture processor unit functionality by
+             rendering scanlines based on the number of CPU cycles that have
+             currently passed since the last opcode executed. */
+void ExecutePPU(BYTE cycles, GBCPU & CPU)
 {
     /* TODO: Optimize ExecutePPU
              1) Create macros from cycles per scanline and register masks
@@ -36,27 +35,28 @@ void ExecutePPU(byte cycles, GBCPU & CPU)
 
     if (scanline_counter >= 456)
     {
-        // Reset scanline if we're past 153
-        if (CPU.readByte(PPU_LY) > 153)
-            CPU.writeByte(0, PPU_LY);
-
-        // Set V-Blank interrupt if we're at LY = 144
-        else if (CPU.readByte(PPU_LY) == 144)
+        if (CPU.readByte(PPU_LY) > VBLANK_END)
         {
+            // Reset scanline if we're past 153
+            CPU.writeByte(0, PPU_LY);
+        }
+        else if (CPU.readByte(PPU_LY) == VBLANK_START)
+        {
+            // Set V-Blank interrupt if we're at LY = 144
             CPU.writeByte(CPU.readByte(INTERRUPT_FLAG) | 0x01, INTERRUPT_FLAG);
             ++CPU.MEM[PPU_LY]; // write directly to avoid resetting to 0 thru writeByte function.
         }
-
-        // Render scanline if we're within range
-        else if (CPU.readByte(PPU_LY) < 144)
+        else if (CPU.readByte(PPU_LY) < VBLANK_START)
         {
+            // Render scanline if we're within range
             RenderScanline(CPU);
             ++CPU.MEM[PPU_LY]; // write directly to avoid resetting to 0 thru writeByte function.
         }
-
-        // 145 - 153 V-Blank
         else
+        {
+            // V-Blank active [144 >= scanline <= 153]
             ++CPU.MEM[PPU_LY]; // write directly to avoid resetting to 0 thru writeByte function.
+        }
 
         // We increment scanlines in each if branch because incrementing it here was skipping scanline 0 
         // Reset scanline cycles counter
@@ -86,11 +86,11 @@ void UpdateLCDStatus(GBCPU & CPU)
     bool HBlank_interrupt = (CPU.MEM[STAT] & 0x08) ? true: false;      // Mode 0 H-Blank interrupt Enable
 
     // If current Status mode changed, request an interrupt if enabled
-    byte stat_mode = (CPU.MEM[STAT] & 0x03); // 0 - HBlank, 1 - V Blank, 2 - Searching OAM, 3 - Xfer to LCD
+    BYTE stat_mode = (CPU.MEM[STAT] & 0x03); // 0 - HBlank, 1 - V Blank, 2 - Searching OAM, 3 - Xfer to LCD
     bool request_LCD_interrupt = false;
 
     // V-Blank
-    if (CPU.MEM[PPU_LY] >= 144)
+    if (CPU.MEM[PPU_LY] >= VBLANK_START)
     {
         // Set current mode
         CPU.MEM[STAT] = (CPU.MEM[STAT] & 0xFC) | 1;
@@ -171,14 +171,14 @@ void RenderScanline(GBCPU & CPU)
 
     // Get LCD Control flags      
     bool bg_tile_data = (CPU.MEM[LCDC] & 0x10) ? true : false; // 1 = 8000-8FFF, 0 = 8800-97FF. Location of data bytes. NOTE: if using 8800-97FF, used signed btyes
-    word data_addr = (bg_tile_data ? 0x8000 : 0x8800);
+    WORD data_addr = (bg_tile_data ? 0x8000 : 0x8800);
 
     // Render the Tiles if enabled
     bool bg_disp_en = (CPU.MEM[LCDC] & 0x01) ? true : false; // BG becomes white for GameBoy. Differs for SGB/GBC
     if (bg_disp_en)
     {
         bool bg_map_used = (CPU.MEM[LCDC] & 0x08) ? true : false; // 1 = 9C00-9FFF, 0 = 9800-9BFF. Location of BG tile #s to use
-        word tile_addr = (bg_map_used ? 0x9C00 : 0x9800);
+        WORD tile_addr = (bg_map_used ? 0x9C00 : 0x9800);
         RenderTile(tile_addr, data_addr, CPU);
     }
     else
@@ -191,7 +191,7 @@ void RenderScanline(GBCPU & CPU)
     if( window_display_en )
     {
         bool window_map_used = (CPU.MEM[LCDC] & 0x40) ? true : false; // 1 = 9C00-9FFF, 0 = 9800-9BFF. Location of Window tile #s to use    
-        word win_addr = (window_map_used ? 0x9C00 : 0x9800);
+        WORD win_addr = (window_map_used ? 0x9C00 : 0x9800);
         RenderWindow(win_addr, data_addr, CPU);
     }
     else
@@ -213,45 +213,45 @@ void RenderScanline(GBCPU & CPU)
 
 }
 
-void RenderTile(word loc_addr, word data_addr, GBCPU & CPU)
+void RenderTile(WORD loc_addr, WORD data_addr, GBCPU & CPU)
 {
     // Get the current scanline (base y-coordinate) to render
-    byte scanline = CPU.readByte(PPU_LY);
+    BYTE scanline = CPU.readByte(PPU_LY);
     
     // Determine true Y-coordinate for background to be rendered using the SCROLL position for the Y coordinate and scanline
     // Then, determine which tile row we're currently on based on the y-position. Divide by 8 because each tile is 8-pixels vertically, with 32 tiles per row
-    byte tile_position_y = CPU.readByte(PPU_SCROLLY) + scanline;
-    word tile_row_index = (byte(tile_position_y / 8)) * 32;
+    BYTE tile_position_y = CPU.readByte(PPU_SCROLLY) + scanline;
+    WORD tile_row_index = (BYTE(tile_position_y / 8)) * 32;
 
     // Render the 160 area based on what Scroll position and scanline we're in
     for (int px = 0; px < 160; ++px)
     {
         // Get the current x-position based on the Scroll-X coordinate.
         // Based off this position, determine which tile within the tile_row_index is to be used to render the current pixel (horizontally)
-        byte tile_position_x = px + CPU.readByte(PPU_SCROLLX);       
-        word tile_col_index = tile_position_x / 8;
+        BYTE tile_position_x = px + CPU.readByte(PPU_SCROLLX);       
+        WORD tile_col_index = tile_position_x / 8;
 
         // Get the final tile # address using the indexes calculated and the base tile use address
-        word tile_num_address = tile_col_index + tile_row_index + loc_addr; 
+        WORD tile_num_address = tile_col_index + tile_row_index + loc_addr; 
 
         // Read the tile number from the memory. Either as signed or unsigned offset depending on data address selected
-        signed_word tile_num;  // Multiplied by 16 because each tile takes 16-bytes to render 8x8 pixels
-        word start_tile_address;     // The starting address for the 16 bytes to render the 8x8 pixels
+        SIGNED_WORD tile_num;  // Multiplied by 16 because each tile takes 16-bytes to render 8x8 pixels
+        WORD start_tile_address;     // The starting address for the 16 bytes to render the 8x8 pixels
         if (data_addr == 0x8800) // signed data
         {
-            tile_num = (signed_byte)CPU.readByte(tile_num_address);
+            tile_num = (SIGNED_BYTE)CPU.readByte(tile_num_address);
             start_tile_address = data_addr + (tile_num + 128) * 16; // Add 128 to negate the signed offset. e.g #-128 would be $0*16 = $0 + $8800 = $8800. 
         }
         else
         {
-            tile_num = (byte)CPU.readByte(tile_num_address);
+            tile_num = (BYTE)CPU.readByte(tile_num_address);
             start_tile_address = data_addr + tile_num * 16;
         }
 
         // Determine which byte out of the 16-byte tile we are in, using the current y-position modulo 8 to get a 0-7 range. x2 because we need 2 bytes per tile
-        word current_tile_address = start_tile_address + (tile_position_y % 8) * 2;
+        WORD current_tile_address = start_tile_address + (tile_position_y % 8) * 2;
 
-        // TODO: Palette data
+        // TODO: Implement Tile palette data
 
         // Use bit shifting and bitwise OR to get a 2-bit number using the bit at position tile_position
         pixel color = getRBG( ((((CPU.readByte(current_tile_address)     >> (7 - (tile_position_x % 8))) & 0x01) << 1) & 0x02) +
@@ -266,10 +266,10 @@ void RenderTile(word loc_addr, word data_addr, GBCPU & CPU)
     return;
 }
 
-void RenderWindow(word loc_addr, word data_addr, GBCPU & CPU)
+void RenderWindow(WORD loc_addr, WORD data_addr, GBCPU & CPU)
 {
     // Render the window stored in memory
-    byte scanline = CPU.readByte(PPU_LY);
+    BYTE scanline = CPU.readByte(PPU_LY);
 
     // Only render Window tiles if the scanline is within window position
     if (scanline < CPU.readByte(PPU_WY))
@@ -277,38 +277,38 @@ void RenderWindow(word loc_addr, word data_addr, GBCPU & CPU)
 
     // Determine true Y-coordinate for background to be rendered using the scanline (y-coordinate)
     // Then, determine which tile row we're currently on based on the y-position. Divide by 8 because each tile is 8-pixels vertically, with 32 tiles per row
-    byte tile_position_y = scanline;
-    word tile_row_index = (byte(tile_position_y / 8)) * 32;
+    BYTE tile_position_y = scanline;
+    WORD tile_row_index = (BYTE(tile_position_y / 8)) * 32;
 
     // Render the 160 area based on what Scroll position and scanline we're in
     for (int px = CPU.readByte(PPU_WX) - 7; px < 160; ++px)
     {
         // Get the current x-position based on the WINDOW-X coordinate.
         // Based off this position, determine which tile within the tile_row_index is to be used to render the current pixel (horizontally)
-        byte tile_position_x = px;
-        word tile_col_index = tile_position_x / 8;
+        BYTE tile_position_x = px;
+        WORD tile_col_index = tile_position_x / 8;
 
         // Get the final tile # address using the indexes calculated and the base tile use address
-        word tile_num_address = tile_col_index + tile_row_index + loc_addr;
+        WORD tile_num_address = tile_col_index + tile_row_index + loc_addr;
 
         // Read the tile number from the memory. Either as signed or unsigned offset depending on data address selected
-        signed_word tile_num;  // Multiplied by 16 because each tile takes 16-bytes to render 8x8 pixels
-        word start_tile_address;     // The starting address for the 16 bytes to render the 8x8 pixels
+        SIGNED_WORD tile_num;  // Multiplied by 16 because each tile takes 16-bytes to render 8x8 pixels
+        WORD start_tile_address;     // The starting address for the 16 bytes to render the 8x8 pixels
         if (data_addr == 0x8800) // signed data
         {
-            tile_num = (signed_byte)CPU.readByte(tile_num_address);
+            tile_num = (SIGNED_BYTE)CPU.readByte(tile_num_address);
             start_tile_address = data_addr + (tile_num + 128) * 16; // Add 128 to negate the signed offset. e.g #-128 would be $0*16 = $0 + $8800 = $8800. 
         }
         else
         {
-            tile_num = (byte)CPU.readByte(tile_num_address);
+            tile_num = (BYTE)CPU.readByte(tile_num_address);
             start_tile_address = data_addr + tile_num * 16;
         }
 
         // Determine which byte out of the 16-byte tile we are in, using the current y-position modulo 8 to get a 0-7 range. x2 because we need 2 bytes per tile
-        word current_tile_address = start_tile_address + (tile_position_y % 8) * 2;
+        WORD current_tile_address = start_tile_address + (tile_position_y % 8) * 2;
 
-        // TODO: Palette data
+        // TODO: Implement Window palette data
 
         // Use bit shifting and bitwise OR to get a 2-bit number using the bit at position tile_position
         pixel color = getRBG( ((((CPU.readByte(current_tile_address)     >> (7 - (tile_position_x % 8))) & 0x01) << 1) & 0x02) +
@@ -326,22 +326,22 @@ void RenderWindow(word loc_addr, word data_addr, GBCPU & CPU)
 void RenderSprite(GBCPU & CPU, bool use_8X16)
 {
     // Render the sprite (OBJ) sotred in memory $8000 - $8FFF
-    word loc_addr = 0x8000; // use unsigned numbering
+    WORD loc_addr = 0x8000; // use unsigned numbering
     
     // Get the current scanline we're in
-    byte scanline = CPU.readByte(PPU_LY);
+    BYTE scanline = CPU.readByte(PPU_LY);
 
     // Loop through Sprite Attribute memory to render sprites on current scanline
-    for (byte sprite = 0; sprite < 40; ++sprite)
+    for (BYTE sprite = 0; sprite < 40; ++sprite)
     {
         // Get sprite attribute information from the current index
-        word sprite_addr = sprite * 4 + SPRITE_TABLE_START;
+        WORD sprite_addr = sprite * 4 + SPRITE_TABLE_START;
 
         // Get Y-position-16, X-position-8, Tile/Pattern #, and the Attribute/Flag
-        byte sprite_y_position = CPU.readByte(sprite_addr) - 16;
-        byte sprite_x_position = CPU.readByte(sprite_addr + 1) - 8;
-        byte tile_num_index    = CPU.readByte(sprite_addr + 2);     // Multiplied by 16 because each 8x8 tile takes 16 bytes
-        byte sprite_attribute  = CPU.readByte(sprite_addr + 3);
+        BYTE sprite_y_position = CPU.readByte(sprite_addr) - 16;
+        BYTE sprite_x_position = CPU.readByte(sprite_addr + 1) - 8;
+        BYTE tile_num_index    = CPU.readByte(sprite_addr + 2);     // Multiplied by 16 because each 8x8 tile takes 16 bytes
+        BYTE sprite_attribute  = CPU.readByte(sprite_addr + 3);
 
         // Check if we need to flip sprite along y-axis
         bool y_flip = (sprite_attribute & 0x04) ? true: false;
@@ -352,7 +352,7 @@ void RenderSprite(GBCPU & CPU, bool use_8X16)
             (scanline < sprite_y_position + (use_8X16 ? 16 : 8)) )
         {
             // Get the current byte of the sprite to render
-            byte tile_num_y_offset = (scanline - sprite_y_position);
+            BYTE tile_num_y_offset = (scanline - sprite_y_position);
             if(y_flip)
             {
                 // Mirror the sprite vertically if y_flip attribute is present
@@ -360,14 +360,14 @@ void RenderSprite(GBCPU & CPU, bool use_8X16)
             }
 
             // Get the index to the tile address through the base address, tile #, and the current horizontal line (*2 because each line is 2 bytes)
-            word tile_addr = loc_addr + tile_num_index * 16 + tile_num_y_offset * 2; 
-            byte tile1 = CPU.readByte(tile_addr);
-            byte tile2 = CPU.readByte(tile_addr + 1);
+            WORD tile_addr = loc_addr + tile_num_index * 16 + tile_num_y_offset * 2; 
+            BYTE tile1 = CPU.readByte(tile_addr);
+            BYTE tile2 = CPU.readByte(tile_addr + 1);
 
             // Loop through the 2 bytes of data bit-by-bit, accounting 
             for (int x = 0; x < 8; ++x)
             {
-                // TODO: Palette data
+                // TODO: Implement Sprite palette data
 
                 // Use bit shifting and bitwise OR to get a 2-bit number using the bit at position tile_position
                 pixel color = getRBG( ( ((tile1 >> (x_flip ? x : (7 - x))) & 0x01) << 1) +
@@ -390,7 +390,7 @@ void RenderSprite(GBCPU & CPU, bool use_8X16)
 }
 
 
-pixel getRBG(byte value)
+pixel getRBG(BYTE value)
 {
     pixel t;
     switch (value)
@@ -426,6 +426,9 @@ pixel getRBG(byte value)
 }
 
 
+/* DEBUG FUNCTION: TestVideoRAM(GBCPU & CPU)
+                   Fill video RAM with a temporary tile to ensure
+                   tile rendering is working properly. */
 void TestVideoRAM(GBCPU & CPU)
 {
     int i = 0x8800;
@@ -451,7 +454,7 @@ void TestVideoRAM(GBCPU & CPU)
     for (int i = 0x9C00; i < 0x9FFF; ++i)
     {
         // file tile #s with all As (tile #0)
-        CPU.MEM[i] = (signed_byte)-128;
+        CPU.MEM[i] = (SIGNED_BYTE)-128;
     }
 
     // trim off half of top left corner
