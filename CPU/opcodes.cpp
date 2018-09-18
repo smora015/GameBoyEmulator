@@ -1,7 +1,7 @@
 /*  Name:        opcodes.cpp
     Author:      Sergio Morales [sergiomorales.me]
     Created:     August 30th, 2016
-    Modified:    September 12th, 2018
+    Modified:    September 18th, 2018
     Description: This file contains the definitions for every opcode and
                  prefix-CB opcode used in the GameBoy CPU.            
     
@@ -790,7 +790,7 @@ void GBCPU::OP72() { writeByte(D, GetHL()); ++PC; cycles = 8; }               //
 void GBCPU::OP73() { writeByte(E, GetHL()); ++PC; cycles = 8; }               // LD (HL), E
 void GBCPU::OP74() { writeByte(H, GetHL()); ++PC; cycles = 8; }               // LD (HL), H
 void GBCPU::OP75() { writeByte(L, GetHL()); ++PC; cycles = 8; }               // LD (HL), L
-void GBCPU::OP76() { while (MEM[INTERRUPT_FLAG] == 0x00); ++PC; cycles = 4; } // HALT until an INTERRUPT occurs
+void GBCPU::OP76() { halted = true; cycles = 4; }                             // HALT until an INTERRUPT occurs
 void GBCPU::OP77() { writeByte(A, GetHL()); ++PC; cycles = 8; }               // LD (HL), A
 void GBCPU::OP78() { A = B; ++PC; cycles = 4; }                               // LD A, B
 void GBCPU::OP79() { A = C; ++PC; cycles = 4; }                               // LD A, C

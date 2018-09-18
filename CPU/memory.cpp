@@ -78,7 +78,15 @@ void GBCPU::writeByte(BYTE data, WORD addr)
     }
     else
     {
-        cout << "Unsupported MBC type!!!" << endl;
+        // MBC type not supported
+        string type = "Selected ROM type is currently not supported! \n";
+
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+            "Error 02: Unsupported ROM type",
+            type.c_str(),
+            NULL);
+
+        exit(0x0002);
     }
 
 }
@@ -126,7 +134,13 @@ BYTE GBCPU::readByte(WORD addr)
     }
     else
     {
-        cout << "Unsupported MBC type!!!" << endl;
+        // MBC type not supported
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                 "Error 02: Unsupported ROM type",
+                                 "Selected ROM type is currently not supported!",
+                                 NULL);
+
+        exit(0x002);
         return 0x00;
     }
 

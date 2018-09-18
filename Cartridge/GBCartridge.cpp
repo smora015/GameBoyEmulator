@@ -60,9 +60,15 @@ void load_rom(string rom_name, GBCPU & cpu)
     ifstream file(rom_name, std::ios_base::binary);
 
     // Quit game if specified ROM is not found
-    /*if (file.good() != true)
-        exit(0x01);*/
+    if (file.good() != true)
+    {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                 "Error 01: File not found",
+                                 "Please specify an existing ROM file.",
+                                 NULL);
 
+        exit(0x0001);
+    }
 
     // Get ROM bank #0 - $0000 - $3FFF
     for (int i = 0; i <= ROM_END; ++i)

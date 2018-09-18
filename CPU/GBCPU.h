@@ -35,6 +35,7 @@ public:
 
     /***** Internal Variables *****/
     bool IME;                   // Interrupt Master Enable flag
+    bool halted;                // Indicates that HALT has executed. Used in interrupt checks
     BYTE cycles;				// The number of cycles currently counted
     unsigned short DIV_counter; // Internal DIV cycle counter to increment the DIV counter in memory
     unsigned short TMA_counter; // Internal TMA cycle counter to increment the time counter in memory

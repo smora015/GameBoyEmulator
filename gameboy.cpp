@@ -35,7 +35,11 @@ int main(int argc, char **argv)
     SDL_RenderClear(renderer);
 
     // Load ROM data and initialize CPU/PPU
-    string default_rom = "Tetris (World).gb"; //"01 - special.gb"; //BIOS.gb"; //;//"02-interrupts.gb";//"cpu_instrs.gb"; // ; 
+    //"01 - special.gb"
+    //"BIOS.gb"
+    //"cpu_instrs.gb"
+    //"Tetris (World).gb"
+    string default_rom = "02-interrupts.gb"; 
     GBCPU CPU = GBCPU();
 
     load_rom(argc < 2 ? default_rom : string(argv[1]), CPU);
@@ -60,7 +64,6 @@ int main(int argc, char **argv)
     // This flag captures the user clicking 'X' in order to elegantly quit the program
     bool quit = false;
 
-
     // DEBUG: Max executions
     int counter_max = strtol((argc < 3 ? "200000" : argv[2]), NULL, 10);
 
@@ -74,20 +77,11 @@ int main(int argc, char **argv)
         int cycles_in_frame = 0; // GAMEBOY_CYCLES_FRAME;
         while (cycles_in_frame < GAMEBOY_CYCLES_FRAME )
         {
-            //if (++counter > (GAMEBOY_CYCLES_FRAME / 2))
-            //{
-                // Get SDL events for joypad input and menu items
-                quit = ProcessSDLEvents(SDL_GB_window_event, CPU);
-
-              //  counter = 0;
-            //}
-                
+           // Get SDL events for joypad input and menu items
+            quit = ProcessSDLEvents(SDL_GB_window_event, CPU);
 
             /* TODO: Infrastructure optimizations
-                     1) Remove cycles as argument. CPU class already has cycles internally defined
-                     2) Rename file to gameboy.cpp
-                     3) Move Timer & DIV update logic to their own files. Will help with
-                        making project robust to multi-platforms later down the line. */
+               1) Remove cycles as argument. CPU class already has cycles internally defined */
                     
             // Otherwise, execute the current CPU instruction
             CPU.execute();

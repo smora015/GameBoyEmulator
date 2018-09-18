@@ -73,10 +73,17 @@ void UpdateTimer(BYTE cycles, GBCPU & CPU)
                     // Otherwise, increment memory counter by the number of times the CPU cycle counter has gone over the
                     // selected frequency. This is not done incrementally because we are simulating multiple cycles happening
                     // over incremental loops in the software.
-                    //CPU.MEM[TIMA] += (16 / CPU.TMA_counter);
+                    
                     ++CPU.MEM[TIMA];
+                    //CPU.MEM[TIMA] += (16 / CPU.TMA_counter);
+                    
+                    /*if (CPU.MEM[TIMA] + (CPU.TMA_counter / 4) > 0xFF)
+                        CPU.MEM[TIMA] = 0xFF;
+                    else
+                        CPU.MEM[TIMA] += CPU.TMA_counter / 4;*/
+
                     // Leave only remainder of cycles in counter.
-                    //CPU.TMA_counter = 16 % CPU.TMA_counter;
+                    //CPU.TMA_counter %= 4;
 
                 }
 

@@ -212,13 +212,12 @@ void GBCPU::init()
 {
     cout << "GBCPU initializng...";
 
-
-    // Initialize internal variables
-    IME = true; // TODO: confirm initial value
+    /* Begin Gameboy (DMG) set up of values to match with boot sequence*/
+    // Initialize internal CPU variables
+    IME = false;
+    halted = false;
     DIV_counter = 0;
     TMA_counter = 0;
-
-    // Initialize the registers with default values for program execution
     PC = 0x100;
 
     // For GB, set to this value. For others, will be different
@@ -265,8 +264,9 @@ void GBCPU::init()
     MEM[0xFF4A] = (BYTE) 0x00; // WY
     MEM[0xFF4B] = (BYTE) 0x00; // WX
     MEM[0xFFFF] = (BYTE) 0x00; // IE
+    /* End Gameboy (DMG) set up of values to match with boot sequence*/
 
-    // Initialize JOYPAD to no buttons pressed
+    // Initialize JOYPAD to no buttons pressed to prevent resets
     MEM[JOYPAD_P1] = 0x3F;
 
     cout << "done!" << endl;
