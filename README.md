@@ -22,14 +22,13 @@ Most CPU opcodes have been verified through Blargg's trusty  test ROMs:
 
 ![Blargg's cpu_instrs.gb test rom](http://sergiomorales.me/assets/images/gb/cpu_instrs.png)
 ![Blargg's 01-special.gb test rom](http://sergiomorales.me/assets/images/gb/01-special.png)
-![Blargg's 01-special.gb test rom](http://sergiomorales.me/assets/images/gb/04-op_r,imm.png)
-![Blargg's 01-special.gb test rom](http://sergiomorales.me/assets/images/gb/09-op_r,r.png)
+![Blargg's 04-op_r,imm.gb test rom](http://sergiomorales.me/assets/images/gb/04-op_r,imm.png)
+![Blargg's 09-op_r,r.gb test rom](http://sergiomorales.me/assets/images/gb/09-op_r,r.png)
 
-_Not pictured- 02-interrupts.gb is failing on the timer test._
 
 ### Known Issues
-- Interrrupts: Timer interrupt is not counting up the TMA counter properly. This is causing 01 test to hang.
 - CPU: Need to finish up opcodes $F8, $08, and $10 to update the flags correctly
+- CPU: DAA opcode not working according to 01-special test.
 - CPU: All ADC and SUBC opcodes are causing 04 and 09 tests to fail. Need to investigate what is not correct.
 
 
