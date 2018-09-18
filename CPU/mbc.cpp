@@ -1,7 +1,7 @@
 /*  Name:        mbc.cpp
     Author:      Sergio Morales [sergiomorales.me]
     Created:     August 30th, 2016
-    Modified:    September 12th, 2018
+    Modified:    September 18th, 2018
     Description: This file contains the logic for manipulating memory based upon the
                  corresponding Memory Bank Controller selected from $147 in the
                  cartridge header region. */
@@ -115,7 +115,12 @@ void GBCPU::MBC1write(WORD addr, BYTE data)
 
     // Writing to JOYPAD_P1 should only set P14 and P15 outputs
     else if (addr == JOYPAD_P1)
-        MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x0F) | (data & 0x30);
+    {
+        // If we switch between checking DPAD and BUTTONS, we need to reset the currently
+        // pressed button in order to prevent the program from thinking buttons are already pressed.
+        if ((MEM[JOYPAD_P1] & 0x30) != data)
+            MEM[JOYPAD_P1] = ((data & 0x30) | 0x0F);
+    }
 
     // Reset the DIV register if we're writing to it
     else if (addr == DIV)

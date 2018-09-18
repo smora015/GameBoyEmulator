@@ -3,6 +3,7 @@
 
 #include <SDL.h>
 // @TODO: Audio file and macro definitions
+// @TODO: Make GBCPU instance a global, singleton (will allow for clean up of function params
 
 /********************************* Datatype Definitions *********************************/
 typedef unsigned char BYTE;
@@ -57,11 +58,13 @@ typedef enum MBC_TYPES
 } MBC_TYPES;
 
 
-
 /**************************** Global Variables ********************************/
 /* Global SDL variables */
 extern const Uint8 *SDL_GB_keyboard_state; // Holds the keys pressed
 extern SDL_Event SDL_GB_window_event;
+
+extern BYTE GB_buttons; // Packs the currently pressed button keys
+extern BYTE GB_dpad;    // Packs the currently pressed dpad keys
 
 /* Memory-related variables from extracting ROM (Cartridge.cpp) */
 extern BYTE * ext_rom;         // Holds all external (switchable) RAM, to be added in memory by 16 Kbyte banks
@@ -170,12 +173,32 @@ extern BYTE pixel_buffer[144][160][4];
 
 /* Joypad registers and masks */
 #define JOYPAD_P1  0xFF00
-#define JOYPAD_P15 0x20          //      |  [x]
-#define JOYPAD_P14 0x10          //  [x] | 
+#define P1_BUTTONS 0x20          // Bit that enables input of button keys
+#define P1_DPAD    0x10          // Bit that enables input of dpad key
+
 #define JOYPAD_P13 0x08          // DOWN | START
 #define JOYPAD_P12 0x04          // UP   | SELECT
 #define JOYPAD_P11 0x02          // LEFT | B
 #define JOYPAD_P10 0x01          // RIGHT| A
+
+#define P1_DOWN    0x08
+#define P1_UP      0x04
+#define P1_LEFT    0x02
+#define P1_RIGHT   0x01
+
+#define P1_START   0x08
+#define P1_SELECT  0x04
+#define P1_B       0x02
+#define P1_A       0x01
+
+#define BUTTON_A      SDLK_z
+#define BUTTON_B      SDLK_x
+#define BUTTON_SELECT SDLK_n
+#define BUTTON_START  SDLK_m
+#define BUTTON_UP     SDLK_UP
+#define BUTTON_DOWN   SDLK_DOWN
+#define BUTTON_LEFT   SDLK_LEFT
+#define BUTTON_RIGHT  SDLK_RIGHT
 
 /* IO registers and masks */
 #define SERIAL_XFER 0xFF01

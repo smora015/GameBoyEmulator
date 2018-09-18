@@ -1,7 +1,7 @@
 /*  Name:        memory.cpp
     Author:      Sergio Morales [sergiomorales.me]
     Created:     August 30th, 2016
-    Modified:    September 12th, 2018
+    Modified:    September 18th, 2018
     Description: Description: This file contains the definitions for functions that
                  access internal registers and memory for the CPU. */
 
@@ -48,7 +48,13 @@ void GBCPU::writeByte(BYTE data, WORD addr)
 
         // Writing to JOYPAD_P1 should only set P14 and P15 outputs
         else if (addr == JOYPAD_P1)
-            MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x0F) | (data & 0x30);
+        {
+            // If we switch between checking DPAD and BUTTONS, we need to reset the currently
+            // pressed button in order to prevent the program from thinking buttons are already pressed.
+            //if ((MEM[JOYPAD_P1] & 0x30) != data)
+                //MEM[JOYPAD_P1] = ((data & 0x30) | 0x0F);
+            MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x0F) | data;
+        }
 
         // Reset the DIV register if we're writing to it
         else if (addr == DIV)
@@ -129,81 +135,21 @@ BYTE GBCPU::readByte(WORD addr)
 
 void GBCPU::ProcessJoyPad()
 {
-    //bool interrupt_req_prev = (CPU.MEM[INTERRUPT_FLAG] & 0x10) ? true : false;
-    // Use temproary variables to store key presses. Checking JOYPAD_P1 itself will
-    // result in unexpected interrupts due to the fact that it may have been set to 0.
-    BYTE buttons = 0xC0;
-    BYTE dpad = 0xC0;
+    // Check whether DPAD or BUTTONS are enabled and store in JOYPAD_P1.
+    // This relay process is done to prevent the issue where the program
+    // thinks START is pressed when it's really DOWN, etc etc. due
+    // to the nature of how key presses are stored in memory
+    if (!(MEM[JOYPAD_P1] & P1_BUTTONS))
+        // Button key presses enabled
+        MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x30) | (GB_buttons & 0x0F);
 
-    // Poll event
-    SDL_PollEvent(&SDL_GB_window_event);
-    SDL_GB_keyboard_state = SDL_GetKeyboardState(NULL);
+    else if (!(MEM[JOYPAD_P1] & P1_DPAD))
+        // DPAD key presses enabled
+        MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x30) | (GB_dpad & 0x0F);
 
-    if ((SDL_GB_window_event.key.type == SDL_KEYUP) ||
-        (SDL_GB_window_event.key.type == SDL_KEYDOWN))
-    {
-        if (!(MEM[JOYPAD_P1] & JOYPAD_P14))
-        {
-            //cout << "KEY PRESSED! " << event.key.keysym.sym << endl;
-
-            // ROM requesting read of LEFT DOWN RIGHT UP 
-            if (SDL_GB_keyboard_state[SDL_SCANCODE_LEFT])
-                dpad |= JOYPAD_P11;
-            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P11);
-
-            else if (SDL_GB_keyboard_state[SDL_SCANCODE_RIGHT])
-                dpad |= JOYPAD_P10;
-            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P10);
-
-            if (SDL_GB_keyboard_state[SDL_SCANCODE_DOWN])
-                dpad |= JOYPAD_P13;
-            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P13);
-
-            else if (SDL_GB_keyboard_state[SDL_SCANCODE_UP])
-                dpad |= JOYPAD_P12;
-            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P12);
-
-        }
-
-        else if (!(MEM[JOYPAD_P1] & JOYPAD_P15))
-        {
-            //cout << "KEY PRESSED! " << event.key.keysym.sym << endl;
-
-            // ROM requesting read of A B SELECT START
-            if (SDL_GB_keyboard_state[SDL_SCANCODE_Z])
-                buttons |= JOYPAD_P11;
-            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P11);
-
-            if (SDL_GB_keyboard_state[SDL_SCANCODE_X])
-                buttons |= JOYPAD_P10;
-            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P10);
-
-            if (SDL_GB_keyboard_state[SDL_SCANCODE_PERIOD])
-                buttons |= JOYPAD_P12;
-            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P12);
-
-            if (SDL_GB_keyboard_state[SDL_SCANCODE_SLASH])
-                buttons |= JOYPAD_P13;
-            //CPU.MEM[JOYPAD_P1] &= ~(JOYPAD_P13);
-        }
-    }
-
-    //if ((CPU.MEM[JOYPAD_P1] & 0x0F) != 0x0F)
-        //CPU.MEM[INTERRUPT_FLAG] |= 0x10;
-
-    if (dpad & 0x0F)
-    {
-        // Update JOYPAD_P1 in memory and request interrupt (if needed)
-        MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x30) | (~dpad);
-        MEM[INTERRUPT_FLAG] |= 0x10;
-    }
-
-    else if (buttons & 0x0F)
-    {
-        // Update JOYPAD_P1 in memory and request interrupt (if needed)
-        MEM[JOYPAD_P1] = (MEM[JOYPAD_P1] & 0x30) | (~buttons);
-        MEM[INTERRUPT_FLAG] |= 0x10;
-    }
+    //else
+        // No key presses enabled
+        //MEM[JOYPAD_P1] |= 0x0F;
 }
 
 // readImmByte - Read immediate byte from memory
