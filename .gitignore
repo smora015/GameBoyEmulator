@@ -1,0 +1,6 @@
+Backup/
+Debug/
+Documents/
+GameBoy/Debug/
+GameBoy/Dependencies/
+*.VC.db

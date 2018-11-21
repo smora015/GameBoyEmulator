@@ -2,7 +2,6 @@
 #define GAMEBOY_H
 
 #include <SDL.h>
-// @TODO: Audio file and macro definitions
 // @TODO: Make GBCPU instance a global, singleton (will allow for clean up of function params
 
 /********************************* Datatype Definitions *********************************/
@@ -61,7 +60,8 @@ typedef enum MBC_TYPES
 /**************************** Global Variables ********************************/
 /* Global SDL variables */
 extern const Uint8 *SDL_GB_keyboard_state; // Holds the keys pressed
-extern SDL_Event SDL_GB_window_event;
+extern SDL_Event SDL_GB_window_event;      // Current state of the SDL window session
+extern SDL_AudioSpec SDL_GB_audio;         // Holds the SDL audio configuration
 
 extern BYTE GB_buttons; // Packs the currently pressed button keys
 extern BYTE GB_dpad;    // Packs the currently pressed dpad keys

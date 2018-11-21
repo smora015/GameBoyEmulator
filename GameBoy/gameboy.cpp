@@ -15,6 +15,7 @@
 #include "joypad.h"       // SDL event/input processing
 #include "timers.h"       // CPU timer logic
 #include "interrupts.h"   // CPU interrupt logic
+#include "GBAPU.h"        // Sound logic
 
 // Top-level emulator configurations
 //#define DEBUG_GAMEBOY
@@ -34,12 +35,20 @@ int main(int argc, char **argv)
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(renderer);
 
+    // Initialize audio
+    SDL_GB_audio = { 0 };
+    SDL_GB_audio.freq = 48000;      // Number of samples / second - SamplesPerSecond;
+    SDL_GB_audio.format = AUDIO_S8; // Set up audio as signed 8-bit samples - AUDIO_S16LE;
+    SDL_GB_audio.channels = 2;      // Set up audio as stereo (2-channels)
+    SDL_GB_audio.samples = 4096;    // The buffer size.  BufferSize;
+    SDL_GB_audio.callback = &SDLAudioCallback;
+
     // Load ROM data and initialize CPU/PPU
-    //"01 - special.gb"
-    //"BIOS.gb"
-    //"cpu_instrs.gb"
+    // "01-special.gb"
+    // "04-op r,imm.gb"
+    // "09-op r,r.gb"
     //"Tetris (World).gb"
-    string default_rom = "02-interrupts.gb"; 
+    string default_rom = "cpu_instrs.gb";
     GBCPU CPU = GBCPU();
 
     load_rom(argc < 2 ? default_rom : string(argv[1]), CPU);
