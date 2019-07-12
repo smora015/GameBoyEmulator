@@ -3,4 +3,5 @@ Debug/
 Documents/
 GameBoy/Debug/
 GameBoy/Dependencies/
+*.sdf
 *.VC.db
