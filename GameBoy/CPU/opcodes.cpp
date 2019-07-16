@@ -282,7 +282,10 @@ inline void GBCPU::SWAP(BYTE & reg)
     ((reg & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 }
 
-// Decimal Adjust Register A. This Opcode is still a mystery to me and has been taken from forums, sites, etc.
+// Decimal Adjust Register A. Although I understand this is used for BCD operations,
+// the exact inner workings is confusing to me and I take no credit for this part.
+// Special thanks to AWJ of NesDev for this snippet below: 
+// https://forums.nesdev.com/viewtopic.php?f=20&t=15944
 inline void GBCPU::DAA()
 {
     BYTE temp = A;
@@ -291,47 +294,39 @@ inline void GBCPU::DAA()
     if (SUBTRACT_FLAG == true)
     {
        // Adjust lower nibble if we have a half-carry
-        if (((temp & 0x0F) > 0x09) || (HALF_CARRY_FLAG == true))
-        {
-            temp = (temp - 0x06) & 0xFF;
-
-            // Set Carry Flag after adjustment
-            if ((temp & 0xF0) == 0xF0)
-                CARRY_FLAG = true;
-            else
-                CARRY_FLAG = false;
-        }
+        if (HALF_CARRY_FLAG == true)
+			temp -= 0x06;
         
         // Adjust higher nibble if we have a carry
-        if (((temp & 0xF0) > 0x90) || (CARRY_FLAG == true))
+        if (CARRY_FLAG == true)
             temp -= 0x60;
     }
     else
     {
-        // Adjust lower nibble if we have a half-carry
+		// Adjust higher nibble if we have a carry
+		if ((temp > 0x99) || (CARRY_FLAG == true))
+		{
+			temp += 0x60;
+
+			// Set Carry Flag after adjustment
+			CARRY_FLAG = true;
+		}
+		
+		// Adjust lower nibble if we have a half-carry
         if (((temp & 0x0F) > 0x09) || (HALF_CARRY_FLAG == true))
         {
-            temp = (temp + 0x06) & 0xFF;
-
-            // Set Carry Flag after adjustment
-            if ((temp & 0xF0) == 0x00)
-                CARRY_FLAG = true;
-            else
-                CARRY_FLAG = false;
+            temp += 0x06;
         }
-
-        // Adjust higher nibble if we have a carry
-        if (((temp & 0xF0) > 0x90) || (CARRY_FLAG == true))
-            temp += 0x60;
     }
 
+	// Set A to the new result
     A = temp;
 
     // Detect Zero
     ((A & 0xFF) == 0x00 ? ZERO_FLAG = true : ZERO_FLAG = false);
 
-    // Clear Half-Carry (C1275DBA)
-    //HALF_CARRY_FLAG = false;
+    // Clear Half-Carry
+    HALF_CARRY_FLAG = false;
 }
 
 // Rotate A left

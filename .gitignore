@@ -1,7 +1,14 @@
+# General
 Backup/
-Debug/
 Documents/
-GameBoy/Debug/
+
+# SDL library goes here
 GameBoy/Dependencies/
+
+# Visual Studio 
+.vs/
+Debug/
+GameBoy/Debug/
 *.sdf
 *.VC.db
+*.suo
