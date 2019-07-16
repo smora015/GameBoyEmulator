@@ -1,5 +1,5 @@
 # GameBoyEmulator
-A simple Game Boy emulator implemented from scratch in C++ using Simple DirectMedia Layer (SDL) 2 library, and Visual Studio 2017. This project is meant to be more of a learning experience to teach myself more about emulation and graphics rendering on Windows. My hope is to be able to port this project onto other platforms (such as Android or iOS) once fully complete.
+A simple Game Boy emulator implemented from scratch in C++ using Simple DirectMedia Layer (SDL) 2 library, and Visual Studio 2017. This project is meant to be more of a learning experience to teach myself more about emulation and graphics rendering on Windows. My hope is to be able to port this project onto other platforms (such as Android or iOS) once fully complete. As I progress on this project, I also plan on making a tutorial on implementing a GameBoy emulator from scratch on my website.
 
 ## Table of Contents
 - [Progress](#progress)
@@ -14,7 +14,7 @@ A simple Game Boy emulator implemented from scratch in C++ using Simple DirectMe
 
 ## Progress
 
-Currently able to load intro screens on ROM_ONLY MBC1 type ROMs such as Tetris:
+Currently able to load & run (though not fully) ROM_ONLY MBC1 type ROMs, such as Tetris:
 
 ![Tetris Intro Loaded!](http://sergiomorales.me/assets/images/gb/tetris_intro.gif)
 
@@ -28,7 +28,6 @@ Most CPU opcodes have been verified through Blargg's trusty  test ROMs:
 
 ### Known Issues
 - CPU: Need to finish up opcodes $F8, $08, and $10 to update the flags correctly
-- CPU: DAA opcode not working according to 01-special test.
 - CPU: All ADC and SUBC opcodes are causing 04 and 09 tests to fail. Need to investigate what is not correct.
 
 
